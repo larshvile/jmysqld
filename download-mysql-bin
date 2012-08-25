@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 alias=$1
 url=$2
@@ -31,11 +31,14 @@ fi
 mkdir $target.tmp
 
 echo "Downloading $url."
-curl $url > $target.tmp/binaries
+wget -O $target.tmp/dist $url
 
 # unpack
+echo "Unpacking binaries."
+tar --extract --directory=$target.tmp --strip-components=1 --file=$target.tmp/dist
 
 # cleanup
+rm $target.tmp/dist
 mv $target.tmp $target
 
 echo "Installed $alias."
