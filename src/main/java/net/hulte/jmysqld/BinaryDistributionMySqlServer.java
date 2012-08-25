@@ -15,7 +15,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
     @Override
     public String getVersion() {
-        return "kvakk!"; // TODO
+        return null; // TODO
     }
 
     @Override

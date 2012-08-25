@@ -25,6 +25,16 @@ public class MySqlTest {
     }
 
 
+    @Test
+    public void server_version_is_obtained() {
+        assertNotNull(someServer().getVersion());
+    }
+
+
+    static MySqlServer someServer() {
+        return mySqlServerFromBinaryDistribution(distPath());
+    }
+
     static Path distPath() {
         final String version = System.getProperty("mysqlVersion");
         if (version == null) {
