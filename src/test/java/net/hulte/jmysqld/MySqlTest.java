@@ -17,31 +17,33 @@ public class MySqlTest {
         mySqlServerFromBinaryDistribution(distPath().getParent());
     }
 
-
     @Test
     public void server_is_created_from_binary_distribution() {
         final MySqlServer server = mySqlServerFromBinaryDistribution(distPath());
         assertNotNull(server);
     }
 
-
     @Test
     public void server_version_is_obtained() {
-        assertNotNull(someServer().getVersion());
+        assertEquals(mysqlVersion(),
+            theServer().getVersion());
     }
 
-
-    static MySqlServer someServer() {
+    static MySqlServer theServer() {
         return mySqlServerFromBinaryDistribution(distPath());
     }
 
     static Path distPath() {
+        return FileSystems.getDefault().getPath("mysql-bin").resolve(mysqlVersion());
+    }
+    
+    static String mysqlVersion() {
         final String version = System.getProperty("mysqlVersion");
         if (version == null) {
             throw new IllegalStateException("MySQL version (alias) must be provided as a system property, "
                 + "-DmysqlVersion=<alias>");
         }
-        return FileSystems.getDefault().getPath("mysql-bin").resolve(version);
-    }
+        return version;
+    }    
 }
 
