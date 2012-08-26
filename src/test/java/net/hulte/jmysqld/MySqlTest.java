@@ -2,6 +2,7 @@ package net.hulte.jmysqld;
 
 import static net.hulte.jmysqld.MySql.*;
 import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.*;
 
 import java.nio.file.*;
 
@@ -25,8 +26,7 @@ public class MySqlTest {
 
     @Test
     public void server_version_is_obtained() {
-        assertEquals(mysqlVersion(),
-            theServer().getVersion());
+        assertThat(theServer().getVersion(), equalTo(mysqlVersion()));
     }
 
     static MySqlServer theServer() {
@@ -36,14 +36,14 @@ public class MySqlTest {
     static Path distPath() {
         return FileSystems.getDefault().getPath("mysql-bin").resolve(mysqlVersion());
     }
-    
+
     static String mysqlVersion() {
         final String version = System.getProperty("mysqlVersion");
         if (version == null) {
-            throw new IllegalStateException("MySQL version (alias) must be provided as a system property, "
-                + "-DmysqlVersion=<alias>");
+            throw new IllegalStateException("MySQL version must be provided as a system property, "
+                + "-DmysqlVersion=<version>");
         }
         return version;
-    }    
+    }
 }
 
