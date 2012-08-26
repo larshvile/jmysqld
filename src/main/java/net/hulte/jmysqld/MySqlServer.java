@@ -7,6 +7,9 @@ public interface MySqlServer {
 
     /**
      * Returns the server version.
+     *
+     * @throws MySqlProcessException if the MySQL process can't be invoked
+     * @throws IllegalStateException if the version string can't be parsed
      */
     String getVersion();
 

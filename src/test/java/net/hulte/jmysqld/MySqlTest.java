@@ -1,6 +1,7 @@
 package net.hulte.jmysqld;
 
 import static net.hulte.jmysqld.MySql.*;
+import static net.hulte.jmysqld.Utilities.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 
@@ -34,7 +35,7 @@ public class MySqlTest {
     }
 
     static Path distPath() {
-        return FileSystems.getDefault().getPath("mysql-bin").resolve(mysqlVersion());
+        return path("mysql-bin").resolve(mysqlVersion());
     }
 
     static String mysqlVersion() {

@@ -3,6 +3,7 @@ package net.hulte.jmysqld;
 import static java.util.Arrays.asList;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.regex.*;
 
@@ -38,6 +39,30 @@ final class Utilities {
         return m.matches() ? m.group(1) : null;
     }
 
+    /**
+     * Starts the MySQL process, waits for it to complete and returns its output.
+     *
+     * @param pb the MySQL process, in the form of a {@link ProcessBuilder}
+     * @return the output printed on stdout
+     * @throws MySqlProcessException on errors starting the process
+     */
+    static String collectOutput(ProcessBuilder pb) {
+        try {
+            final Process p = pb.start();
+            p.waitFor();
+
+            if (p.exitValue() != 0) {
+                throw new MySqlProcessException("Failed to collect output from '"
+                    + pb.command() + "', exit-code: " + p.exitValue()
+                    + ", error: " + readText(p.getErrorStream()));
+            }
+
+            return readText(p.getInputStream());
+        } catch (IOException|InterruptedException e) {
+            throw new MySqlProcessException("Unable to run '" + pb.command() + "'.", e);
+        }
+    }
+
     static BufferedReader asReader(InputStream in) {
         return new BufferedReader(new InputStreamReader(in));
     }
@@ -48,6 +73,10 @@ final class Utilities {
 
     static <E> List<E> list(E... elements) {
         return new ArrayList<E>(asList(elements));
+    }
+
+    static Path path(String first, String... more) {
+        return FileSystems.getDefault().getPath(first, more);
     }
 
     private Utilities() {}

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ "$1" = "failWithCode99" ]; then
+    echo "instructed to fail with code 99" >&2
+    exit 99
+fi
+
+echo "some output"
+exit 0
+
