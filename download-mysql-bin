@@ -1,11 +1,11 @@
 #!/bin/bash -e
 
-alias=$1
+version=$1
 url=$2
 
-if [ "$alias" = "" ] || [ "$url" = "" ]; then
-  echo "Usage: `basename $0` <ALIAS> <URL>"
-  echo "Downloads the binaries for a version of MySQL under a provided alias."
+if [ "$version" = "" ] || [ "$url" = "" ]; then
+  echo "Usage: `basename $0` <VERSION> <URL>"
+  echo "Downloads the binaries for a specific version of MySQL."
   echo "If the binaries already exist nothing will be downloaded"
   exit 1
 fi
@@ -15,7 +15,7 @@ if [ ! -d mysql-bin ]; then
   mkdir mysql-bin
 fi
 
-target=mysql-bin/$alias
+target=mysql-bin/$version
 
 # drop out if the binaries already have been downloaded
 if [ -d $target ]; then
@@ -41,6 +41,6 @@ tar --extract --directory=$target.tmp --strip-components=1 --file=$target.tmp/di
 rm $target.tmp/dist
 mv $target.tmp $target
 
-echo "Installed $alias."
+echo "Installed $version."
 exit 0
 
