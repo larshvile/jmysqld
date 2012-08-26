@@ -44,12 +44,12 @@ final class Utilities {
      *
      * @param pb the MySQL process, in the form of a {@link ProcessBuilder}
      * @return the output printed on stdout
-     * @throws MySqlProcessException on errors starting the process
+     * @throws MySqlProcessException if the output cannot be obtained
      */
     static String collectOutput(ProcessBuilder pb) {
         try {
             final Process p = pb.start();
-            p.waitFor();
+            waitForMySqlProcess(p);
 
             if (p.exitValue() != 0) {
                 throw new MySqlProcessException("Failed to collect output from '"
@@ -58,8 +58,22 @@ final class Utilities {
             }
 
             return readText(p.getInputStream());
-        } catch (IOException|InterruptedException e) {
+        } catch (IOException e) {
             throw new MySqlProcessException("Unable to run '" + pb.command() + "'.", e);
+        }
+    }
+
+    /**
+     * Waits for a MySQL process to complete by invoking {@link Process#waitFor()}.
+     *
+     * @throws MySqlProcessException if the current thread is interrupted while waiting
+     */
+    static void waitForMySqlProcess(Process p) {
+        try {
+            p.waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new MySqlProcessException("Interrupted while waiting for " + p, e);
         }
     }
 
