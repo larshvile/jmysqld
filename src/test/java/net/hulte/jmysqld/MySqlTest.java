@@ -5,14 +5,21 @@ import static net.hulte.jmysqld.Utilities.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 
+import java.io.*;
 import java.nio.file.*;
+import java.util.*;
 
 import org.junit.*;
+import org.junit.rules.*;
 import org.junit.runner.*;
 import org.junit.runners.*;
 
 @RunWith(JUnit4.class)
 public class MySqlTest {
+
+    @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
+
 
     @Test(expected=IllegalArgumentException.class)
     public void server_cannot_be_created_from_a_folder_that_does_not_contain_the_binary_distribution() {
@@ -26,9 +33,21 @@ public class MySqlTest {
     }
 
     @Test
-    public void server_version_is_obtained() {
+    public void the_server_version_is_obtained() {
         assertThat(theServer().getVersion(), equalTo(mysqlVersion()));
     }
+
+    @Test
+    public void empty_folder_is_initialized_with_mysql_data_files() throws Exception {
+        final File dataDir = tmp.getRoot();
+
+        assertThat(contents(dataDir), not(hasItem("mysql")));
+
+        theServer().initializeDataDirectory(dataDir.toPath());
+
+        assertThat(contents(dataDir), hasItem("mysql"));
+    }
+
 
     static MySqlServer theServer() {
         return mySqlServerFromBinaryDistribution(distPath());
@@ -45,6 +64,10 @@ public class MySqlTest {
                 + "-DmysqlVersion=<version>");
         }
         return version;
+    }
+
+    static List<String> contents(File f) {
+        return list(f.list());
     }
 }
 

@@ -39,42 +39,15 @@ final class Utilities {
         return m.matches() ? m.group(1) : null;
     }
 
-    /**
-     * Starts the MySQL process, waits for it to complete and returns its output.
-     *
-     * @param pb the MySQL process, in the form of a {@link ProcessBuilder}
-     * @return the output printed on stdout
-     * @throws MySqlProcessException if the output cannot be obtained
-     */
-    static String collectOutput(ProcessBuilder pb) {
-        try {
-            final Process p = pb.start();
-            waitForMySqlProcess(p);
 
-            if (p.exitValue() != 0) {
-                throw new MySqlProcessException("Failed to collect output from '"
-                    + pb.command() + "', exit-code: " + p.exitValue()
-                    + ", error: " + readText(p.getErrorStream()));
-            }
-
-            return readText(p.getInputStream());
-        } catch (IOException e) {
-            throw new MySqlProcessException("Unable to run '" + pb.command() + "'.", e);
-        }
+    static String userName() {
+        return System.getProperty("user.name");
     }
 
-    /**
-     * Waits for a MySQL process to complete by invoking {@link Process#waitFor()}.
-     *
-     * @throws MySqlProcessException if the current thread is interrupted while waiting
-     */
-    static void waitForMySqlProcess(Process p) {
-        try {
-            p.waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new MySqlProcessException("Interrupted while waiting for " + p, e);
-        }
+    static ProcessBuilder newProcessBuilder(Path command, String... args) {
+        final List<String> commandAndArgs = list(command.toString());
+        commandAndArgs.addAll(list(args));
+        return new ProcessBuilder(commandAndArgs);
     }
 
     static BufferedReader asReader(InputStream in) {

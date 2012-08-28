@@ -1,6 +1,9 @@
 package net.hulte.jmysqld;
 
-public interface MySqlServerProcess {
+/**
+ * A running instance of the MySQL server.
+ */
+public interface MySqlServerInstance {
 
     // TODO getPort()? -- kind of hard if a config file is used??
 

@@ -17,15 +17,21 @@
     </properties>
 
     <dependencies>
-        <!-- <dependency> TODO redirect log-output from the mysqld process?
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.6.6</version>
-        </dependency> -->
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.6.6</version>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <artifactId>junit-dep</artifactId>
             <version>4.10</version>
             <scope>test</scope>
         </dependency>
@@ -46,6 +52,15 @@
                     <source>${source.version}</source>
                     <target>${source.version}</target>
                     <showWarnings>true</showWarnings>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.3</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <org.slf4j.simplelogger.defaultlog>trace</org.slf4j.simplelogger.defaultlog>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>
