@@ -66,6 +66,10 @@ final class Utilities {
         return FileSystems.getDefault().getPath(first, more);
     }
 
+    static void addShutdownHook(Runnable hook) {
+        Runtime.getRuntime().addShutdownHook(new Thread(hook));
+    }
+
     private Utilities() {}
 }
 

@@ -26,8 +26,26 @@ public class MySqlProcessTest {
         thrown.expect(MySqlProcessException.class);
         thrown.expectMessage("src/test/resources/unknown-script");
 
-        startMySqlProcess(new ProcessBuilder(stubMysqldPath()
-            .resolveSibling("unknown-script").toString()));
+        startMySqlProcess(newProcessBuilder(stubMysqld()
+            .resolveSibling("unknown-script")));
+    }
+
+    @Test
+    public void stdout_can_be_read_after_process_has_completed() {
+        final MySqlProcess p = startMySqlProcess(newProcessBuilder(stubMysqld()))
+            .waitForCompletion();
+
+        assertThat(p.readStdOut(),
+            equalTo("some output")); // printed on stdout by the script
+    }
+
+    @Test
+    public void stderr_can_be_read_after_process_has_completed() {
+        final MySqlProcess p = startMySqlProcess(newProcessBuilder(stubMysqld(), "failWithCode99"))
+            .waitForCompletion();
+
+        assertThat(p.readStdErr(),
+            equalTo("instructed to fail with code 99")); // printed on stdout by the script
     }
 
     @Test
@@ -35,27 +53,26 @@ public class MySqlProcessTest {
         thrown.expect(MySqlProcessException.class);
         thrown.expectMessage("src/test/resources/stub-mysqld");
         thrown.expectMessage("exit-code: 99");
-        thrown.expectMessage("error: instructed to fail with code 99"); // printed on stderr by the script
+        thrown.expectMessage("error: instructed to fail with code 99");
 
-        startMySqlProcess(new ProcessBuilder(stubMysqld(), "failWithCode99"))
+        startMySqlProcess(newProcessBuilder(stubMysqld(), "failWithCode99"))
             .waitForSuccessfulCompletion();
     }
 
     @Test
-    public void stdout_can_be_read_after_process_has_completed() {
-        final MySqlProcess p = startMySqlProcess(new ProcessBuilder(stubMysqld()));
-        p.waitForCompletion();
+    public void exit_code_can_be_retrieved() {
+        assertThat(startMySqlProcess(newProcessBuilder(stubMysqld()))
+                .waitForCompletion()
+                .exitCode(),
+            equalTo(0));
 
-        assertThat(p.readStdOut(),
-            equalTo("some output")); // printed on stdout by the script
+        assertThat(startMySqlProcess(newProcessBuilder(stubMysqld(), "failWithCode99"))
+                .waitForCompletion()
+                .exitCode(),
+            equalTo(99));
     }
 
-
-    static String stubMysqld() {
-        return stubMysqldPath().toString();
-    }
-
-    static Path stubMysqldPath() {
+    static Path stubMysqld() {
         return path("src", "test", "resources", "stub-mysqld");
     }
 }

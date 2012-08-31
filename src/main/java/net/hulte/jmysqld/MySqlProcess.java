@@ -4,6 +4,7 @@ import static net.hulte.jmysqld.Utilities.*;
 
 import java.io.*;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import org.slf4j.Logger;
 
 /**
@@ -14,6 +15,7 @@ final class MySqlProcess {
 
     private final Process p;
     private final List<String> command;
+    private CountDownLatch logFlushed; // TODO fubar...
 
 
     static MySqlProcess startMySqlProcess(ProcessBuilder pb) {
@@ -39,9 +41,9 @@ final class MySqlProcess {
     MySqlProcess waitForSuccessfulCompletion() {
         waitForCompletion();
         try {
-            if (p.exitValue() != 0) {
+            if (exitCode() != 0) {
                 throw new MySqlProcessException("Failed to run '"
-                    + command + "', exit-code: " + p.exitValue()
+                    + command + "', exit-code: " + exitCode()
                     + ", error: " + readText(p.getErrorStream()));
             }
 
@@ -59,6 +61,9 @@ final class MySqlProcess {
     MySqlProcess waitForCompletion() {
         try {
             p.waitFor();
+            if (logFlushed != null) { // TODO kind of fucked..
+                logFlushed.await();
+            }
             return this;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -70,11 +75,21 @@ final class MySqlProcess {
      * Returns the text written to stdout by the process.
      */
     String readStdOut() {
-        try {
-            return readText(p.getInputStream());
-        } catch (IOException e) {
-            throw new MySqlProcessException("Unable to read stdout.", e);
-        }
+        return readProcessStream(p.getInputStream());
+    }
+
+    /**
+     * Returns the text written to stderr by the process.
+     */
+    String readStdErr() {
+        return readProcessStream(p.getErrorStream());
+    }
+
+    /**
+     * Returns the exit-code of the process after it has terminated.
+     */
+    int exitCode() {
+        return p.exitValue();
     }
 
     /**
@@ -84,6 +99,7 @@ final class MySqlProcess {
     MySqlProcess logStdOutWith(final Logger logger) {
         final Thread t = new Thread(new Runnable() {
             @Override public void run() {
+                logFlushed = new CountDownLatch(1);
                 try {
                     final BufferedReader r = asReader(p.getInputStream());
                     String line = null;
@@ -96,6 +112,8 @@ final class MySqlProcess {
                     }
                 } catch (IOException e) {
                     logger.warn("Unable to read stdout.", e);
+                } finally {
+                    logFlushed.countDown();
                 }
             }
         });
@@ -104,6 +122,30 @@ final class MySqlProcess {
         t.start();
 
         return this;
+    }
+
+    /**
+     * Registers a shutdown hook that shuts down this process when the JVM terminates.
+     */
+    MySqlProcess shutdownOnExit() { // TODO this is useless crap....
+        addShutdownHook(new Runnable() {
+            @Override public void run() {
+                // TODO never mind if the process has already exited
+
+                // TODO log that please...
+                System.out.println("Shutting down...");
+                p.destroy();
+            }
+        });
+        return this;
+    }
+
+    private String readProcessStream(InputStream in) {
+        try {
+            return readText(in);
+        } catch (IOException e) {
+            throw new MySqlProcessException("Unable to output from process.", e);
+        }
     }
 }
 

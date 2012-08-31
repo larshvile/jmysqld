@@ -25,9 +25,27 @@ public interface MySqlServer {
     void initializeDataDirectory(Path dataDir);
 
     /**
-     * TODO starts an instance & returns when startup has completed??
+     * Starts the MySQL server and returns when startup has completed.
+     *
+     * @throws MySqlProcessException if unable to start
      */
-    // MySqlServerInstance start(); // TODO dataDir & settings .. a builder perhaps??
+    MySqlServerInstance start(Path dataDir); // TODO options
+
+    /**
+     * Returns {@code true} if an instance of the MySQL server is  running
+     * in a provided data directory.
+     *
+     * @throws MySqlProcessException
+     */
+    boolean isInstanceRunningIn(Path dataDir);
+
+    /**
+     * Attempts to shut down an instance of the MySQL server running in a provided
+     * data directory.
+     *
+     * @throws MySqlProcessException
+     */
+    void shutdownInstanceIn(Path dataDir);
 
 }
 

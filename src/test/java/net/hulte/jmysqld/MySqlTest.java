@@ -15,10 +15,10 @@ import org.junit.runner.*;
 import org.junit.runners.*;
 
 @RunWith(JUnit4.class)
-public class MySqlTest {
+public class MySqlTest { // TODO really just a test for the binary-dist version... rename?
 
     @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    public TemporaryFolder tmp = new TemporaryFolder(); // TODO make that a 'named' folder instead, tmp/$className/$version
 
 
     @Test(expected=IllegalArgumentException.class)
@@ -38,16 +38,59 @@ public class MySqlTest {
     }
 
     @Test
+    @Ignore // TODO fixo
     public void empty_folder_is_initialized_with_mysql_data_files() throws Exception {
-        final File dataDir = tmp.getRoot();
+        assertThat(contents(dataDir()), not(hasItem("mysql")));
 
-        assertThat(contents(dataDir), not(hasItem("mysql")));
+        theServer().initializeDataDirectory(dataDir());
 
-        theServer().initializeDataDirectory(dataDir.toPath());
-
-        assertThat(contents(dataDir), hasItem("mysql"));
+        assertThat(contents(dataDir()), hasItem("mysql"));
     }
 
+    @Test
+    @Ignore
+    public void server_starts_up() {    // TODO what about some jdbc-testing?
+        final MySqlServer server = theServer();
+        // TODO final Path dataDir = tmp.getRoot().toPath();
+        final Path dataDir = new File("/home/lars/Desktop/mysql-datadir").toPath();
+
+        // TODO theServer().initializeDataDirectory(dataDir);
+        theServer().start(dataDir); // TODO AUTO_SHUTDOWN
+        // TODO what now?
+
+        try {
+            Thread.sleep(2000);
+        } catch (Exception e) { throw new RuntimeException(e); }
+
+        // TODO connect to it & have some fun
+    }
+
+    @Test
+    public void instance_is_not_reported_as_running_when_it_has_not_even_been_started() {
+        assertFalse(theServer().isInstanceRunningIn(dataDir()));
+    }
+
+    @Test
+    public void instance_can_be_started_and_determined_as_running_and_stopped() {
+        final MySqlServer server = theServer();
+        final Path dataDir = new File("/home/lars/Desktop/mysql-datadir-test").toPath();
+
+        assertFalse(server.isInstanceRunningIn(dataDir));
+
+        server.initializeDataDirectory(dataDir);
+        server.start(dataDir); // TODO AUTO_SHUTDOWN
+
+        assertTrue(server.isInstanceRunningIn(dataDir));
+
+        server.shutdownInstanceIn(dataDir);
+
+        assertFalse(server.isInstanceRunningIn(dataDir));
+    }
+
+
+    Path dataDir() {
+        return tmp.getRoot().toPath();
+    }
 
     static MySqlServer theServer() {
         return mySqlServerFromBinaryDistribution(distPath());
@@ -66,8 +109,8 @@ public class MySqlTest {
         return version;
     }
 
-    static List<String> contents(File f) {
-        return list(f.list());
+    static List<String> contents(Path p) {
+        return list(p.toFile().list());
     }
 }
 
