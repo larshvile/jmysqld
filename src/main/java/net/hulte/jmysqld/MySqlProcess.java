@@ -16,7 +16,7 @@ final class MySqlProcess {
 
     private final Process p;
     private final List<String> command;
-    private CountDownLatch logFlushed; // TODO fubar...
+    private CountDownLatch logging;
 
 
     static MySqlProcess startMySqlProcess(ProcessBuilder pb) {
@@ -62,9 +62,7 @@ final class MySqlProcess {
     MySqlProcess waitForCompletion() {
         try {
             p.waitFor();
-            if (logFlushed != null) { // TODO kind of fucked..
-                logFlushed.await();
-            }
+            flushLogs();
             return this;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -102,7 +100,7 @@ final class MySqlProcess {
 
         final Thread t = new Thread(new Runnable() {
             @Override public void run() {
-                logFlushed = new CountDownLatch(1);
+                logging = new CountDownLatch(1);
                 try {
                     final BufferedReader r = asReader(p.getInputStream());
                     String line = null;
@@ -116,7 +114,7 @@ final class MySqlProcess {
                 } catch (IOException e) {
                     logger.warn("Unable to read stdout.", e);
                 } finally {
-                    logFlushed.countDown();
+                    logging.countDown();
                 }
             }
         });
@@ -139,6 +137,12 @@ final class MySqlProcess {
         return getLogger(this.getClass().getPackage().getName()
             + ".#"
             + new File(command.get(0)).toPath().getFileName());
+    }
+
+    private void flushLogs() throws InterruptedException {
+        if (logging != null) {
+            logging.await();
+        }
     }
 }
 
