@@ -53,18 +53,17 @@ public class MySqlTest { // TODO really just a test for the binary-dist version.
     @Test
     public void server_can_be_started_and_stopped_via_datadir() {
         final MySqlServer server = theServer();
-        final Path dataDir = dataDir(); // new File("/home/lars/Desktop/mysql-datadir-test").toPath();
 
-        assertFalse(server.isInstanceRunningIn(dataDir));
+        assertFalse(server.isInstanceRunningIn(dataDir()));
 
-        server.initializeDataDirectory(dataDir); // TODO helper?
-        server.start(dataDir); // TODO AUTO_SHUTDOWN
+        server.initializeDataDirectory(dataDir()); // TODO helper?
+        server.start(dataDir()); // TODO AUTO_SHUTDOWN
 
-        assertTrue(server.isInstanceRunningIn(dataDir));
+        assertTrue(server.isInstanceRunningIn(dataDir()));
 
-        server.shutdownInstanceIn(dataDir);
+        server.shutdownInstanceIn(dataDir());
 
-        assertFalse(server.isInstanceRunningIn(dataDir));
+        assertFalse(server.isInstanceRunningIn(dataDir()));
     }
 
     @Test
