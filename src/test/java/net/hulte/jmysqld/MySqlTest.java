@@ -66,25 +66,38 @@ public class MySqlTest { // TODO really just a test for the binary-dist version.
     }
 
     @Test
-    public void instance_is_not_reported_as_running_when_it_has_not_even_been_started() {
-        assertFalse(theServer().isInstanceRunningIn(dataDir()));
-    }
-
-    @Test
-    public void instance_can_be_started_and_determined_as_running_and_stopped() {
+    public void server_can_be_started_and_stopped_via_datadir() {
         final MySqlServer server = theServer();
-        final Path dataDir = new File("/home/lars/Desktop/mysql-datadir-test").toPath();
+        final Path dataDir = dataDir(); // new File("/home/lars/Desktop/mysql-datadir-test").toPath();
 
         assertFalse(server.isInstanceRunningIn(dataDir));
 
         server.initializeDataDirectory(dataDir);
-        server.start(dataDir); // TODO AUTO_SHUTDOWN
+        server.start(dataDir);
 
         assertTrue(server.isInstanceRunningIn(dataDir));
 
         server.shutdownInstanceIn(dataDir);
 
         assertFalse(server.isInstanceRunningIn(dataDir));
+    }
+
+    @Test
+    public void server_can_be_started_and_stopped_via_instance() {
+        final MySqlServer server = theServer();
+
+        assertFalse(server.isInstanceRunningIn(dataDir()));
+
+        server.initializeDataDirectory(dataDir());
+        final MySqlServerInstance instance = server.start(dataDir()); // TODO AUTO_SHUTDOWN
+
+        assertTrue(instance.isRunning());
+        assertTrue(server.isInstanceRunningIn(dataDir()));
+
+        instance.shutdown();
+
+        assertFalse(instance.isRunning());
+        assertFalse(server.isInstanceRunningIn(dataDir()));
     }
 
 

@@ -7,11 +7,17 @@ public interface MySqlServerInstance {
 
     // TODO getPort()? -- kind of hard if a config file is used??
 
-    // TODO getPid();
+    /**
+     * Returns {@code true} while the instance is running.
+     */
+    boolean isRunning();
 
-    // TODO shutdown()
-
-    // TODO isRunning()?
+    /**
+     * Shuts down the instance.
+     *
+     * @throws MySqlProcessException if unable to shut down
+     */
+    void shutdown();
 
 }
 

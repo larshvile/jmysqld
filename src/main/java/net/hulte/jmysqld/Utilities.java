@@ -39,6 +39,14 @@ final class Utilities {
         return m.matches() ? m.group(1) : null;
     }
 
+    /**
+     * Starts a named, daemon thread.
+     */
+    static void startNamedDaemon(String name, Runnable daemon) {
+        final Thread t = new Thread(daemon, name);
+        t.setDaemon(true);
+        t.start();
+    }
 
     static String userName() {
         return System.getProperty("user.name");

@@ -98,7 +98,7 @@ final class MySqlProcess {
     MySqlProcess logStdOut() {
         final Logger logger = processLogger();
 
-        final Thread t = new Thread(new Runnable() {
+        startNamedDaemon("stdout-logger-for-" + processName(), new Runnable() {
             @Override public void run() {
                 logging = new CountDownLatch(1);
                 try {
@@ -119,9 +119,6 @@ final class MySqlProcess {
             }
         });
 
-        t.setDaemon(true);
-        t.start();
-
         return this;
     }
 
@@ -135,8 +132,11 @@ final class MySqlProcess {
 
     private Logger processLogger() {
         return getLogger(this.getClass().getPackage().getName()
-            + ".#"
-            + new File(command.get(0)).toPath().getFileName());
+            + ".#" + processName());
+    }
+
+    private String processName() {
+        return new File(command.get(0)).toPath().getFileName().toString();
     }
 
     private void flushLogs() throws InterruptedException {

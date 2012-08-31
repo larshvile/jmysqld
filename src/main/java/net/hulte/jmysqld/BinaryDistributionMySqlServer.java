@@ -6,8 +6,9 @@ import static net.hulte.jmysqld.Utilities.*;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.nio.file.*;
-import java.util.regex.Pattern;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 
 final class BinaryDistributionMySqlServer implements MySqlServer {
@@ -58,6 +59,8 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     @Override
     public MySqlServerInstance start(Path dataDir) {  // TODO dataDir/settings.. builder??
 
+        // TODO wipe the log if it exists...? failures to start could then list stderr as well as error.log
+
         // TODO should this really be the default behaviour??
             // TODO .. nope .. options options options
         if (isInstanceRunningIn(dataDir)) {
@@ -73,31 +76,36 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         final ProcessBuilder pb = newProcessBuilder(mysqldSafe(),
             "--basedir=" + distPath,
             "--datadir=" + dataDir,
-            socketOption(dataDir),
+            "--socket=" + socket(dataDir),
             "--pid-file=mysql.pid",
             "--log-error=" + dataDir.resolve("error.log")
             );
 
         pb.directory(distPath.toFile());
-        pb.redirectErrorStream(true);
 
-        startMySqlProcess(pb)
-            .logStdOut();
+        final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(
+            startMySqlProcess(pb).logStdOut(),
+            dataDir);
 
-        try {
-            Thread.sleep(4000); // TODO need to work this out somehow...
-                // .. make sure that it actually started... .. parse error.log OR wait-for-exit ?
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        // TODO eh, let's improve this =)
+        while (!isInstanceRunningIn(dataDir)) {
+            if (!instance.isRunning()) {
+                throw new MySqlProcessException("failed to start...");
+            }
+            try {
+                Thread.sleep(500);
+            }  catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        return null;
+        return instance;
     }
 
     @Override
     public boolean isInstanceRunningIn(Path dataDir) {
         final MySqlProcess p = startMySqlProcess(newProcessBuilder(mysqladmin(),
-                socketOption(dataDir),
+                "--socket=" + socket(dataDir),
                 "ping"))
             .waitForCompletion();
 
@@ -113,7 +121,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     @Override
     public void shutdownInstanceIn(Path dataDir) {
         startMySqlProcess(newProcessBuilder(mysqladmin(),
-                socketOption(dataDir),
+                "--socket=" + socket(dataDir),
                 "--user=root",
                 "shutdown"))
             .waitForSuccessfulCompletion();
@@ -140,8 +148,40 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         return distPath.resolve("bin").resolve("mysqladmin");
     }
 
-    private static String socketOption(Path dataDir) {
-        return "--socket=" + dataDir.resolve("mysql.sock");
+    private static Path socket(Path dataDir) {
+        return dataDir.resolve("mysql.sock");
+    }
+
+
+    private class BinaryDistributionMySqlServerInstance implements MySqlServerInstance {
+
+        final Path dataDir;
+        final CountDownLatch running = new CountDownLatch(1); // TODO should be initialized within the monitor instead?
+
+        BinaryDistributionMySqlServerInstance(final MySqlProcess p, Path dataDir) {
+            this.dataDir = dataDir;
+            startNamedDaemon("mysqld-monitor-" + dataDir, new Runnable() {
+                @Override public void run() {
+                    p.waitForCompletion();
+                    running.countDown();
+                }
+            });
+        }
+
+        @Override
+        public boolean isRunning() {
+            return running.getCount() == 1;
+        }
+
+        @Override
+        public void shutdown() {
+            shutdownInstanceIn(dataDir);
+            try {
+                running.await();
+            } catch (InterruptedException e) {
+                throw new MySqlProcessException("Interrupted while waiting for shutdown.", e);
+            }
+        }
     }
 }
 
