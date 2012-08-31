@@ -73,27 +73,32 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         // TODO check out the no-defaults & defaults-file stuff...
 
+        final Path errorLog = dataDir.resolve("error.log");
+
         final ProcessBuilder pb = newProcessBuilder(mysqldSafe(),
             "--basedir=" + distPath,
             "--datadir=" + dataDir,
             "--socket=" + socket(dataDir),
             "--pid-file=mysql.pid",
-            "--log-error=" + dataDir.resolve("error.log")
+            "--log-error=" + errorLog
             );
 
         pb.directory(distPath.toFile());
+        pb.redirectErrorStream(true);
 
+        final MySqlProcess p = startMySqlProcess(pb).logStdOut();
         final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(
-            startMySqlProcess(pb).logStdOut(),
+            p,
             dataDir);
 
         // TODO eh, let's improve this =)
         while (!isInstanceRunningIn(dataDir)) {
             if (!instance.isRunning()) {
-                throw new MySqlProcessException("failed to start...");
+                throw new MySqlProcessException("Failed to start instance, see "
+                    + errorLog + " for details.");
             }
             try {
-                Thread.sleep(500);
+                Thread.sleep(500); // TODO tune me...
             }  catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -160,6 +165,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         BinaryDistributionMySqlServerInstance(final MySqlProcess p, Path dataDir) {
             this.dataDir = dataDir;
+
             startNamedDaemon("mysqld-monitor-" + dataDir, new Runnable() {
                 @Override public void run() {
                     p.waitForCompletion();
@@ -179,6 +185,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
             try {
                 running.await();
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new MySqlProcessException("Interrupted while waiting for shutdown.", e);
             }
         }

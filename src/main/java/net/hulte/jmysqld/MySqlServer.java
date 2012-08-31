@@ -25,7 +25,8 @@ public interface MySqlServer {
     void initializeDataDirectory(Path dataDir);
 
     /**
-     * Starts the MySQL server and returns when startup has completed.
+     * Starts an instance of the MySQL server in a provided data directory. This
+     * method blocks until the server is fully operational.
      *
      * @throws MySqlProcessException if unable to start
      */

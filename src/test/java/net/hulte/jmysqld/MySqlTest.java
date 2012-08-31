@@ -3,6 +3,7 @@ package net.hulte.jmysqld;
 import static net.hulte.jmysqld.MySql.*;
 import static net.hulte.jmysqld.Utilities.*;
 import static org.junit.Assert.*;
+import static org.junit.rules.ExpectedException.*;
 import static org.hamcrest.CoreMatchers.*;
 
 import java.io.*;
@@ -18,7 +19,10 @@ import org.junit.runners.*;
 public class MySqlTest { // TODO really just a test for the binary-dist version... rename?
 
     @Rule
-    public TemporaryFolder tmp = new TemporaryFolder(); // TODO make that a 'named' folder instead, tmp/$className/$version
+    public TemporaryFolder tmp = new TemporaryFolder();
+
+    @Rule
+    public ExpectedException thrown = none();
 
 
     @Test(expected=IllegalArgumentException.class)
@@ -38,7 +42,6 @@ public class MySqlTest { // TODO really just a test for the binary-dist version.
     }
 
     @Test
-    @Ignore // TODO fixo
     public void empty_folder_is_initialized_with_mysql_data_files() throws Exception {
         assertThat(contents(dataDir()), not(hasItem("mysql")));
 
@@ -48,32 +51,14 @@ public class MySqlTest { // TODO really just a test for the binary-dist version.
     }
 
     @Test
-    @Ignore
-    public void server_starts_up() {    // TODO what about some jdbc-testing?
-        final MySqlServer server = theServer();
-        // TODO final Path dataDir = tmp.getRoot().toPath();
-        final Path dataDir = new File("/home/lars/Desktop/mysql-datadir").toPath();
-
-        // TODO theServer().initializeDataDirectory(dataDir);
-        theServer().start(dataDir); // TODO AUTO_SHUTDOWN
-        // TODO what now?
-
-        try {
-            Thread.sleep(2000);
-        } catch (Exception e) { throw new RuntimeException(e); }
-
-        // TODO connect to it & have some fun
-    }
-
-    @Test
     public void server_can_be_started_and_stopped_via_datadir() {
         final MySqlServer server = theServer();
         final Path dataDir = dataDir(); // new File("/home/lars/Desktop/mysql-datadir-test").toPath();
 
         assertFalse(server.isInstanceRunningIn(dataDir));
 
-        server.initializeDataDirectory(dataDir);
-        server.start(dataDir);
+        server.initializeDataDirectory(dataDir); // TODO helper?
+        server.start(dataDir); // TODO AUTO_SHUTDOWN
 
         assertTrue(server.isInstanceRunningIn(dataDir));
 
@@ -88,7 +73,7 @@ public class MySqlTest { // TODO really just a test for the binary-dist version.
 
         assertFalse(server.isInstanceRunningIn(dataDir()));
 
-        server.initializeDataDirectory(dataDir());
+        server.initializeDataDirectory(dataDir()); // TODO helper?
         final MySqlServerInstance instance = server.start(dataDir()); // TODO AUTO_SHUTDOWN
 
         assertTrue(instance.isRunning());
@@ -99,6 +84,20 @@ public class MySqlTest { // TODO really just a test for the binary-dist version.
         assertFalse(instance.isRunning());
         assertFalse(server.isInstanceRunningIn(dataDir()));
     }
+
+    @Test
+    public void exception_is_thrown_if_server_fails_to_start() {
+        thrown.expect(MySqlProcessException.class);
+        thrown.expectMessage("Failed to start");
+        thrown.expectMessage("see " + dataDir().resolve("error.log"));
+
+        // starting the server with an uninitialized data directory should guarantee failure..
+        theServer().start(dataDir());
+    }
+
+    // TODO test the SHUTDOWN_EXISTING option by firing up two instances in the same dataDir
+
+    // TODO make sure that thing works by connecting with jdbc & having some fun...
 
 
     Path dataDir() {
