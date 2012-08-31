@@ -30,7 +30,7 @@ public interface MySqlServer {
      *
      * @throws MySqlProcessException if unable to start
      */
-    MySqlServerInstance start(Path dataDir); // TODO options
+    MySqlServerInstance start(Path dataDir); // TODO options .. and probably some more.. specified port?
 
     /**
      * Returns {@code true} if an instance of the MySQL server is  running

@@ -87,9 +87,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         pb.redirectErrorStream(true);
 
         final MySqlProcess p = startMySqlProcess(pb).logStdOut();
-        final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(
-            p,
-            dataDir);
+        final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p, dataDir);
 
         // TODO eh, let's improve this =)
         while (!isInstanceRunningIn(dataDir)) {
