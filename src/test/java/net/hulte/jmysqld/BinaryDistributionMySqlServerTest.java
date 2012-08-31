@@ -16,7 +16,7 @@ import org.junit.runner.*;
 import org.junit.runners.*;
 
 @RunWith(JUnit4.class)
-public class MySqlTest { // TODO really just a test for the binary-dist version... rename?
+public class BinaryDistributionMySqlServerTest {
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
