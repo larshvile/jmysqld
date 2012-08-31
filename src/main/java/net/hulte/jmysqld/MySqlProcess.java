@@ -1,6 +1,7 @@
 package net.hulte.jmysqld;
 
 import static net.hulte.jmysqld.Utilities.*;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.*;
 import java.util.List;
@@ -96,7 +97,9 @@ final class MySqlProcess {
      * Starts a thread that continously logs the text written to stdout by the process using a
      * provided logger.
      */
-    MySqlProcess logStdOutWith(final Logger logger) {
+    MySqlProcess logStdOut() {
+        final Logger logger = processLogger();
+
         final Thread t = new Thread(new Runnable() {
             @Override public void run() {
                 logFlushed = new CountDownLatch(1);
@@ -108,7 +111,7 @@ final class MySqlProcess {
                         if (line == null) {
                             break;
                         }
-                        logger.trace(line);
+                        logger.debug(line);
                     }
                 } catch (IOException e) {
                     logger.warn("Unable to read stdout.", e);
@@ -124,28 +127,18 @@ final class MySqlProcess {
         return this;
     }
 
-    /**
-     * Registers a shutdown hook that shuts down this process when the JVM terminates.
-     */
-    MySqlProcess shutdownOnExit() { // TODO this is useless crap....
-        addShutdownHook(new Runnable() {
-            @Override public void run() {
-                // TODO never mind if the process has already exited
-
-                // TODO log that please...
-                System.out.println("Shutting down...");
-                p.destroy();
-            }
-        });
-        return this;
-    }
-
     private String readProcessStream(InputStream in) {
         try {
             return readText(in);
         } catch (IOException e) {
             throw new MySqlProcessException("Unable to output from process.", e);
         }
+    }
+
+    private Logger processLogger() {
+        return getLogger(this.getClass().getPackage().getName()
+            + ".#"
+            + new File(command.get(0)).toPath().getFileName());
     }
 }
 
