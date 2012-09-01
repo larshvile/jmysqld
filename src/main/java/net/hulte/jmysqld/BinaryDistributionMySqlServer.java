@@ -90,14 +90,14 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p, dataDir);
 
         // TODO eh, let's improve this =)
-        while (!isInstanceRunningIn(dataDir)) {
+        while (!isInstanceRunningIn(dataDir)) { // TODO, actually this isn't good enough.. another instance could already be running there .. good enough if we checked earlier that it wasn't running though..
             if (!instance.isRunning()) {
                 throw new MySqlProcessException("Failed to start instance, see "
                     + errorLog + " for details.");
             }
             try {
                 Thread.sleep(500); // TODO tune me...
-            }  catch (InterruptedException e) {
+            }  catch (InterruptedException e) { // TODO yet another one of these.. fix it?
                 throw new RuntimeException(e);
             }
         }
@@ -107,18 +107,11 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
     @Override
     public boolean isInstanceRunningIn(Path dataDir) {
-        final MySqlProcess p = startMySqlProcess(newProcessBuilder(mysqladmin(),
+        return startMySqlProcess(newProcessBuilder(mysqladmin(),
                 "--socket=" + socket(dataDir),
                 "ping"))
-            .waitForCompletion();
-
-        if (p.exitCode() == 0) {
-            logger.trace("Instance is running in " + dataDir + ", " + p.readStdOut());
-            return true;
-        } else {
-            logger.trace("Instance is not running in " + dataDir + ", " + p.readStdErr());
-            return false;
-        }
+            .waitForCompletion()
+            .exitCode() == 0;
     }
 
     @Override
