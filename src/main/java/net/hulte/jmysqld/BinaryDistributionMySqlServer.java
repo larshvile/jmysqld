@@ -59,14 +59,14 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     @Override
     public MySqlServerInstance start(Path dataDir) {  // TODO dataDir/settings.. builder??
 
-        // TODO wipe the log if it exists...? failures to start could then list stderr as well as error.log
-
-        // TODO should this really be the default behaviour??
-            // TODO .. nope .. options options options
         if (isInstanceRunningIn(dataDir)) {
+            throw new MySqlProcessException("Another instance is already running in "
+                + dataDir + ".");
+            /*
             logger.warn("Another instance is already running in " + dataDir
                 + ", attempting to shut it down.");
-            shutdownInstanceIn(dataDir);
+            shutdownInstanceIn(dataDir); // TODO this should probably not be the default behaviour... option?
+            */
         }
 
         logger.debug("Starting MySQL in " + dataDir + ".");
@@ -172,7 +172,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         @Override
         public void shutdown() {
-            shutdownInstanceIn(dataDir);
+            shutdownInstanceIn(dataDir); // TODO not really bulletproof.. especially if !isRunning()
             try {
                 running.await();
             } catch (InterruptedException e) {

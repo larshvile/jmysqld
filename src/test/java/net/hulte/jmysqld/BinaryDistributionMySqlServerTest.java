@@ -94,9 +94,29 @@ public class BinaryDistributionMySqlServerTest {
         theServer().start(dataDir());
     }
 
+    @Test
+    public void the_second_instance_starting_in_the_same_data_directory_fails_to_start() {
+        final MySqlServer server = theServer();
+
+        server.initializeDataDirectory(dataDir()); // TODO helper?
+
+        final MySqlServerInstance i1 = server.start(dataDir()); // TODO AUTO_SHUTDOWN
+
+        try {
+            server.start(dataDir());
+            fail();
+        } catch (MySqlProcessException e) {
+            assertThat(e.getMessage(), containsString("Another instance is already running"));
+        }
+
+        assertTrue(i1.isRunning());
+        i1.shutdown();
+    }
+
     // TODO test the SHUTDOWN_EXISTING option by firing up two instances in the same dataDir
 
-    // TODO make sure that thing works by connecting with jdbc & having some fun...
+    // TODO make sure that thing works by connecting with jdbc & having some fun... 
+        // started_instance_is_immediately_available_for_jdbc_connections?
 
 
     Path dataDir() {
