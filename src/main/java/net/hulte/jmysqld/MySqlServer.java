@@ -4,6 +4,10 @@ import java.nio.file.Path;
 
 /**
  * The MySQL server application.
+ *
+ * <p>Note that any method requiring a data directory will <b>not</b> work reliably
+ * unless the client can guarantee that no other thread, jvm or other process
+ * (e.g. a native mysqld) is also working with that directory.</p>
  */
 public interface MySqlServer {
 
@@ -33,16 +37,18 @@ public interface MySqlServer {
     MySqlServerInstance start(Path dataDir); // TODO options .. and probably some more.. specified port?
 
     /**
-     * Returns {@code true} if an instance of the MySQL server is  running
-     * in a provided data directory.
+     * Returns {@code true} if an instance of the MySQL server is running
+     * in the provided data directory. This only works reliably if the instance
+     * running in the provided directory was started using {@code jmysqld}.
      *
      * @throws MySqlProcessException
      */
     boolean isInstanceRunningIn(Path dataDir);
 
     /**
-     * Attempts to shut down an instance of the MySQL server running in a provided
-     * data directory.
+     * Attempts to shut down an instance of the MySQL server running in the provided
+     * data directory. This only works reliably if the instance running in the provided
+     * directory was started using {@code jmysqld}.
      *
      * @throws MySqlProcessException
      */
