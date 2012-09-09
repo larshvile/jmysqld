@@ -71,11 +71,11 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         logger.debug("Starting MySQL in " + dataDir + ".");
 
-        // TODO check out the no-defaults & defaults-file stuff...
-
         final Path errorLog = dataDir.resolve("error.log");
 
         final ProcessBuilder pb = newProcessBuilder(mysqldSafe(),
+            "--no-defaults", // TODO or specific file if provided as option??
+            "--skip-networking", // TODO unless a port is specified
             "--basedir=" + distPath,
             "--datadir=" + dataDir,
             "--socket=" + socket(dataDir),
