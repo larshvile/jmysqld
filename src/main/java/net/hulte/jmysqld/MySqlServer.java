@@ -32,15 +32,18 @@ public interface MySqlServer {
      * Starts an instance of the MySQL server in a provided data directory. This
      * method blocks until the server is fully operational.
      *
+     * @param dataDir the data directory
+     * @param specs specifications of how to launch the new instance
      * @throws MySqlProcessException if unable to start
      */
-    MySqlServerInstance start(Path dataDir); // TODO options .. and probably some more.. specified port?
+    MySqlServerInstance start(Path dataDir, MySqlServerInstanceSpecs specs);
 
     /**
      * Returns {@code true} if an instance of the MySQL server is running
      * in the provided data directory. This only works reliably if the instance
      * running in the provided directory was started using {@code jmysqld}.
      *
+     * @param dataDir the data directory
      * @throws MySqlProcessException
      */
     boolean isInstanceRunningIn(Path dataDir);
@@ -50,6 +53,7 @@ public interface MySqlServer {
      * data directory. This only works reliably if the instance running in the provided
      * directory was started using {@code jmysqld}.
      *
+     * @param dataDir the data directory
      * @throws MySqlProcessException
      */
     void shutdownInstanceIn(Path dataDir);

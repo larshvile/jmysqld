@@ -5,8 +5,6 @@ package net.hulte.jmysqld;
  */
 public interface MySqlServerInstance {
 
-    // TODO getPort()? -- kind of hard if a config file is used??
-
     /**
      * Returns {@code true} while the instance is running.
      */

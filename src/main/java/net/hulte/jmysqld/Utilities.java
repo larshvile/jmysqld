@@ -63,11 +63,15 @@ final class Utilities {
     }
 
     static <E> List<E> list() {
-        return new ArrayList<E>();
+        return new ArrayList<>();
     }
 
     static <E> List<E> list(E... elements) {
-        return new ArrayList<E>(asList(elements));
+        return new ArrayList<>(asList(elements));
+    }
+
+    static <E> Set<E> set() {
+        return new HashSet<>();
     }
 
     static Path path(String first, String... more) {

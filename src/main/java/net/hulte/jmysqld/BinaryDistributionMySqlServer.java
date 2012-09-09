@@ -53,11 +53,8 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
             .waitForSuccessfulCompletion();
     }
 
-    /* TODO some startup-options are required..
-     * SHUTDOWN_EXISTING, AUTO_SHUTDOWN, SETTINGS_IN_DATADIR (otherwise it's no-settings & no-port!)
-     */
     @Override
-    public MySqlServerInstance start(Path dataDir) {  // TODO dataDir/settings.. builder??
+    public MySqlServerInstance start(Path dataDir, MySqlServerInstanceSpecs specs) {
 
         if (isInstanceRunningIn(dataDir)) {
             throw new MySqlProcessException("Another instance is already running in "
