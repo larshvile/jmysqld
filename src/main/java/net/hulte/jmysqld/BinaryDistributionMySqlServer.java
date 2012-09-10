@@ -1,6 +1,7 @@
 package net.hulte.jmysqld;
 
 import static java.nio.file.Files.exists;
+import static net.hulte.jmysqld.MySqlServerInstanceSpecs.Option.*;
 import static net.hulte.jmysqld.MySqlProcess.startMySqlProcess;
 import static net.hulte.jmysqld.Utilities.*;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -57,37 +58,42 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     public MySqlServerInstance start(Path dataDir, MySqlServerInstanceSpecs specs) {
 
         if (isInstanceRunningIn(dataDir)) {
-            throw new MySqlProcessException("Another instance is already running in "
-                + dataDir + ".");
-            /*
-            logger.warn("Another instance is already running in " + dataDir
+            if (!specs.isSet(SHUTDOWN_EXISTING)) {
+                throw new MySqlProcessException("Another instance is already running in "
+                    + dataDir + ".");
+            }
+
+            logger.debug("Another instance is already running in " + dataDir
                 + ", attempting to shut it down.");
-            shutdownInstanceIn(dataDir); // TODO this should probably not be the default behaviour... option?
-            */
+            shutdownInstanceIn(dataDir);
         }
 
         logger.debug("Starting MySQL in " + dataDir + ".");
 
         final Path errorLog = dataDir.resolve("error.log");
+        final List<String> args = list("--no-defaults", // TODO or specific file if provided as option??
+                "--basedir=" + distPath,
+                "--datadir=" + dataDir,
+                "--socket=" + socket(dataDir),
+                "--pid-file=mysql.pid",
+                "--log-error=" + errorLog);
 
-        final ProcessBuilder pb = newProcessBuilder(mysqldSafe(),
-            "--no-defaults", // TODO or specific file if provided as option??
-            "--skip-networking", // TODO unless a port is specified
-            "--basedir=" + distPath,
-            "--datadir=" + dataDir,
-            "--socket=" + socket(dataDir),
-            "--pid-file=mysql.pid",
-            "--log-error=" + errorLog
-            );
+        if (specs.getPort() != null) {
+            args.add("--port=" + specs.getPort());
+        } else { // TODO if (defaultsFile == null)
+            args.add("--skip-networking");
+        }
 
+        final ProcessBuilder pb = newProcessBuilder(mysqldSafe(), args);
         pb.directory(distPath.toFile());
         pb.redirectErrorStream(true);
 
         final MySqlProcess p = startMySqlProcess(pb).logStdOut();
-        final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p, dataDir);
+        final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p, dataDir,
+                specs.isSet(AUTO_SHUTDOWN));
 
         // TODO eh, let's improve this =)
-        while (!isInstanceRunningIn(dataDir)) { // TODO, actually this isn't good enough.. another instance could already be running there .. good enough if we checked earlier that it wasn't running though..
+        while (!isInstanceRunningIn(dataDir)) {
             if (!instance.isRunning()) {
                 throw new MySqlProcessException("Failed to start instance, see "
                     + errorLog + " for details.");
@@ -113,6 +119,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
     @Override
     public void shutdownInstanceIn(Path dataDir) {
+        // TODO log it?
         startMySqlProcess(newProcessBuilder(mysqladmin(),
                 "--socket=" + socket(dataDir),
                 "--user=root",
@@ -151,15 +158,25 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         final Path dataDir;
         final CountDownLatch running = new CountDownLatch(1); // TODO should be initialized within the monitor instead?
 
-        BinaryDistributionMySqlServerInstance(final MySqlProcess p, Path dataDir) {
+        BinaryDistributionMySqlServerInstance(final MySqlProcess p, Path dataDir, boolean autoShutdown) {
             this.dataDir = dataDir;
 
             startNamedDaemon("mysqld-monitor-" + dataDir, new Runnable() {
                 @Override public void run() {
                     p.waitForCompletion();
+                    // TODO log it
                     running.countDown();
                 }
             });
+
+            if (autoShutdown) {
+                addShutdownHook(new Runnable() {
+                    @Override public void run() {
+                        System.out.println("AUTO-SHUTDOWN"); // TODO log it instead?
+                        shutdown();
+                    }
+                });
+            }
         }
 
         @Override
@@ -169,9 +186,13 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         @Override
         public void shutdown() {
-            shutdownInstanceIn(dataDir); // TODO not really bulletproof.. especially if !isRunning()
+            if (!isRunning()) { // TODO not really bulletproof.. especially if !isRunning()
+                return;
+            }
+
+            shutdownInstanceIn(dataDir);
             try {
-                running.await();
+                running.await();    // TODO fixme
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new MySqlProcessException("Interrupted while waiting for shutdown.", e);

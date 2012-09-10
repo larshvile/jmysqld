@@ -19,11 +19,18 @@ public final class MySqlServerInstanceSpecs {
     }
 
     private final Set<Option> options = set();
-    // TODO port
+    private Integer port;
     // TODO defaultsFile
 
 
     // TODO factory method for creating an instance in a 'test profile?' .. SHUTDOWN_EXISTING + AUTO_SHUTDOWN
+    public static MySqlServerInstanceSpecs newInstanceSpecs(Option... options) {
+        final MySqlServerInstanceSpecs result = new MySqlServerInstanceSpecs();
+        for (Option o : options) {
+            result.option(o);
+        }
+        return result;
+    }
 
 
     public MySqlServerInstanceSpecs() {
@@ -37,6 +44,15 @@ public final class MySqlServerInstanceSpecs {
 
     boolean isSet(Option o) {
         return options.contains(o);
+    }
+
+    MySqlServerInstanceSpecs port(Integer port) {
+        this.port = port;
+        return this;
+    }
+
+    Integer getPort() {
+        return port;
     }
 }
 

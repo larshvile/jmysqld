@@ -53,8 +53,12 @@ final class Utilities {
     }
 
     static ProcessBuilder newProcessBuilder(Path command, String... args) {
+        return newProcessBuilder(command, list(args));
+    }
+
+    static ProcessBuilder newProcessBuilder(Path command, Collection<String> args) {
         final List<String> commandAndArgs = list(command.toString());
-        commandAndArgs.addAll(list(args));
+        commandAndArgs.addAll(args);
         return new ProcessBuilder(commandAndArgs);
     }
 

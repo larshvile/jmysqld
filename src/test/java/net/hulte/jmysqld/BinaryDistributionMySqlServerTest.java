@@ -1,6 +1,7 @@
 package net.hulte.jmysqld;
 
 import static net.hulte.jmysqld.MySql.*;
+import static net.hulte.jmysqld.MySqlServerInstanceSpecs.*;
 import static net.hulte.jmysqld.MySqlServerInstanceSpecs.Option.*;
 import static net.hulte.jmysqld.Utilities.*;
 import static org.junit.Assert.*;
@@ -9,6 +10,7 @@ import static org.hamcrest.CoreMatchers.*;
 
 import java.io.*;
 import java.nio.file.*;
+import java.sql.*;
 import java.util.*;
 
 import org.junit.*;
@@ -132,15 +134,24 @@ public class BinaryDistributionMySqlServerTest {
         i2.shutdown();
     }
 
-    // TODO make sure that the thing works by connecting with jdbc & having some fun... 
-        // started_instance_is_immediately_available_for_jdbc_connections?
-            // use 3306 as by default, but override via system prop?
+    @Test
+    public void instance_started_with_specific_port_can_be_connected_to_with_jdbc() throws Exception {
+        final Path dataDir = preparedDataDir();
+        final MySqlServerInstance i = theServer().start(dataDir,
+                defaultSpecs().port(mysqlPort()));
+
+        final ResultSet res = query("select 123");
+        assertTrue(res.next());
+        assertThat(res.getInt(1), equalTo(123));
+
+        i.shutdown();
+    }
 
     // TODO and a version using a settings file
 
 
     MySqlServerInstanceSpecs defaultSpecs() {
-        return new MySqlServerInstanceSpecs(); // TODO +AUTO_SHUTDOWN
+        return newInstanceSpecs(AUTO_SHUTDOWN); // TODO doesn't really do the trick since the folder is removed before JVM-exit
     }
 
     Path preparedDataDir() {
@@ -150,7 +161,8 @@ public class BinaryDistributionMySqlServerTest {
     }
 
     Path dataDir() {
-        return tmp.getRoot().toPath();
+        return new File("/home/lars/Desktop/mysql-data-test").toPath();
+        // TODO fixo return tmp.getRoot().toPath();
     }
 
     static MySqlServer theServer() {
@@ -168,6 +180,20 @@ public class BinaryDistributionMySqlServerTest {
                 + "-DmysqlVersion=<version>");
         }
         return version;
+    }
+
+    static Integer mysqlPort() {
+        final String port = System.getProperty("mysqlPort");
+        return port == null
+            ? 3306
+            : Integer.parseInt(port);
+    }
+
+    static ResultSet query(String query) throws Exception {
+        Class.forName("com.mysql.jdbc.Driver");
+        final Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:" + mysqlPort());
+        final Statement stmt = conn.createStatement();
+        return stmt.executeQuery(query);
     }
 
     static List<String> contents(Path p) {
