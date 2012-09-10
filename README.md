@@ -22,3 +22,7 @@ environment.
 The tests can then be run against the downloaded binaries by supplying a system property
 called mysqlVersion, i.e. "-DmysqlVersion=5.5.27".
 
+Some of the tests require that a JDBC-connection can be opened against the started server instances. The
+default port for this connection is 3306, but it can be changed by supplying a "mysqlPort" system property,
+i.e. "-DmysqlPort=3307".
+
