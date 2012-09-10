@@ -2,12 +2,13 @@ package net.hulte.jmysqld;
 
 import static java.nio.charset.Charset.defaultCharset;
 import static java.nio.file.Files.newBufferedWriter;
+import static java.util.UUID.randomUUID;
 import static net.hulte.jmysqld.MySql.*;
 import static net.hulte.jmysqld.MySqlServerInstanceSpecs.*;
 import static net.hulte.jmysqld.MySqlServerInstanceSpecs.Option.*;
 import static net.hulte.jmysqld.Utilities.*;
 import static org.junit.Assert.*;
-import static org.junit.rules.ExpectedException.*;
+import static org.junit.rules.ExpectedException.none;
 import static org.hamcrest.CoreMatchers.*;
 
 import java.io.*;
@@ -22,9 +23,6 @@ import org.junit.runners.*;
 
 @RunWith(JUnit4.class)
 public class BinaryDistributionMySqlServerTest {
-
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
 
     @Rule
     public ExpectedException thrown = none();
@@ -47,18 +45,18 @@ public class BinaryDistributionMySqlServerTest {
     }
 
     @Test
-    public void empty_folder_is_initialized_with_mysql_data_files() throws Exception {
-        assertThat(contents(dataDir()), not(hasItem("mysql")));
+    public void empty_folder_is_initialized_with_mysql_data_files() {
+        final Path dataDir = newDataDir();
 
-        theServer().initializeDataDirectory(dataDir());
-
-        assertThat(contents(dataDir()), hasItem("mysql"));
+        assertThat(contents(dataDir), not(hasItem("mysql")));
+        theServer().initializeDataDirectory(dataDir);
+        assertThat(contents(dataDir), hasItem("mysql"));
     }
 
     @Test
     public void server_can_be_started_and_stopped_via_datadir() {
         final MySqlServer server = theServer();
-        final Path dataDir = preparedDataDir();
+        final Path dataDir = newPreparedDataDir();
 
         assertFalse(server.isInstanceRunningIn(dataDir));
 
@@ -74,7 +72,7 @@ public class BinaryDistributionMySqlServerTest {
     @Test
     public void server_can_be_started_and_stopped_via_instance() {
         final MySqlServer server = theServer();
-        final Path dataDir = preparedDataDir();
+        final Path dataDir = newPreparedDataDir();
 
         assertFalse(server.isInstanceRunningIn(dataDir));
 
@@ -91,18 +89,20 @@ public class BinaryDistributionMySqlServerTest {
 
     @Test
     public void exception_is_thrown_if_server_fails_to_start() {
+        final Path dataDir = newDataDir();
+
         thrown.expect(MySqlProcessException.class);
         thrown.expectMessage("Failed to start");
-        thrown.expectMessage("see " + dataDir().resolve("error.log"));
+        thrown.expectMessage("see " + dataDir.resolve("error.log"));
 
         // starting the server with an uninitialized data directory should guarantee failure..
-        theServer().start(dataDir(), defaultSpecs());
+        theServer().start(dataDir, defaultSpecs());
     }
 
     @Test
     public void the_second_instance_starting_in_the_same_data_directory_fails_to_start() {
         final MySqlServer server = theServer();
-        final Path dataDir = preparedDataDir();
+        final Path dataDir = newPreparedDataDir();
 
         final MySqlServerInstance i1 = server.start(dataDir, defaultSpecs());
 
@@ -120,7 +120,7 @@ public class BinaryDistributionMySqlServerTest {
     @Test
     public void a_running_instance_is_automatically_shut_down_if_specified() {
         final MySqlServer server = theServer();
-        final Path dataDir = preparedDataDir();
+        final Path dataDir = newPreparedDataDir();
 
         final MySqlServerInstance i1 = server.start(dataDir, defaultSpecs());
 
@@ -138,7 +138,7 @@ public class BinaryDistributionMySqlServerTest {
 
     @Test
     public void instance_started_with_specific_port_can_be_connected_to_with_jdbc() throws Exception {
-        final Path dataDir = preparedDataDir();
+        final Path dataDir = newPreparedDataDir();
         final MySqlServerInstance i = theServer().start(dataDir,
                 defaultSpecs().port(mysqlPort()));
 
@@ -151,7 +151,7 @@ public class BinaryDistributionMySqlServerTest {
 
     @Test
     public void instance_started_with_defaults_file_can_be_connected_to_with_jdbc() throws Exception {
-        final Path dataDir = preparedDataDir();
+        final Path dataDir = newPreparedDataDir();
         final Path defaultsFile = dataDir.resolve("settings.cfg");
 
         try (PrintWriter w = new PrintWriter(newBufferedWriter(defaultsFile, defaultCharset()))) {
@@ -171,18 +171,18 @@ public class BinaryDistributionMySqlServerTest {
 
 
     MySqlServerInstanceSpecs defaultSpecs() {
-        return newInstanceSpecs(AUTO_SHUTDOWN); // TODO doesn't really do the trick since the folder is removed before JVM-exit
+        return newInstanceSpecs(AUTO_SHUTDOWN);
     }
 
-    Path preparedDataDir() {
-        final Path result = dataDir();
+    Path newPreparedDataDir() {
+        final Path result = newDataDir();
         theServer().initializeDataDirectory(result);
         return result;
     }
 
-    Path dataDir() {
-        // TODO remove return new File("/home/lars/Desktop/mysql-data-test").toPath();
-        return tmp.getRoot().toPath();
+    Path newDataDir() {
+        return path("target", "mysql-data", randomUUID().toString())
+            .toAbsolutePath();
     }
 
     static MySqlServer theServer() {
@@ -217,7 +217,10 @@ public class BinaryDistributionMySqlServerTest {
     }
 
     static List<String> contents(Path p) {
-        return list(p.toFile().list());
+        final String[] contents = p.toFile().list();
+        return contents == null
+            ? Utilities.<String>list()
+            : list(contents);
     }
 }
 
