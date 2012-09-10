@@ -12,10 +12,15 @@ public final class MySqlServerInstanceSpecs {
 
     public enum Option {
 
-        /** TODO docme */
+        /**
+         * Automatically shuts down lingering instances already running in the data directory of a starting
+         * instance. This does not work at all if the previous instance wasn't started from {@code jmysqld}.
+         */
         SHUTDOWN_EXISTING,
 
-        /** TODO me too */
+        /**
+         * Installs a shutdown-hook used to shut down the instance when the JVM terminates.
+         */
         AUTO_SHUTDOWN
     }
 
@@ -24,8 +29,19 @@ public final class MySqlServerInstanceSpecs {
     private Path defaultsFile;
 
 
-    // TODO factory method for creating an instance in a 'test profile?' .. SHUTDOWN_EXISTING + AUTO_SHUTDOWN
+    /**
+     * Creates a spec for emulating an embedded database. The instance will automatically be shut down,
+     * attempt to shut down instances already running in the same data directory, and listen for connections
+     * on a provided port.
+     */
+    public static MySqlServerInstanceSpecs newEmbeddedInstanceSpecs(int port) {
+        return newInstanceSpecs(Option.SHUTDOWN_EXISTING, Option.AUTO_SHUTDOWN)
+            .port(port);
+    }
 
+    /**
+     * Creates a new spec with provided options.
+     */
     public static MySqlServerInstanceSpecs newInstanceSpecs(Option... options) {
         final MySqlServerInstanceSpecs result = new MySqlServerInstanceSpecs();
         for (Option o : options) {
