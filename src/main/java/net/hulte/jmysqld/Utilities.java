@@ -86,6 +86,19 @@ final class Utilities {
         Runtime.getRuntime().addShutdownHook(new Thread(hook));
     }
 
+    static void execute(Interruptible task) {
+        try {
+            task.run();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static interface Interruptible {
+        void run() throws InterruptedException;
+    }
+
     private Utilities() {}
 }
 

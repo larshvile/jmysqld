@@ -56,6 +56,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
     @Override
     public MySqlServerInstance start(Path dataDir, MySqlServerInstanceSpecs specs) {
+        // TODO fix this unholy mess...
 
         if (isInstanceRunningIn(dataDir)) {
             if (!specs.isSet(SHUTDOWN_EXISTING)) {
@@ -98,17 +99,18 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
                 specs.isSet(AUTO_SHUTDOWN));
 
         // TODO eh, let's improve this =)
-        while (!isInstanceRunningIn(dataDir)) {
-            if (!instance.isRunning()) {
-                throw new MySqlProcessException("Failed to start instance, see "
-                    + errorLog + " for details.");
+        final Path dir = dataDir;
+        execute(new Interruptible() {
+            @Override public void run() throws InterruptedException {
+                while (!isInstanceRunningIn(dir)) {
+                    if (!instance.isRunning()) {
+                        throw new MySqlProcessException("Failed to start instance, see "
+                            + errorLog + " for details.");
+                    }
+                    Thread.sleep(500); // TODO tune me...
+                }
             }
-            try {
-                Thread.sleep(500); // TODO tune me...
-            }  catch (InterruptedException e) { // TODO yet another one of these.. fix it?
-                throw new RuntimeException(e);
-            }
-        }
+        });
 
         return instance;
     }
@@ -161,15 +163,17 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     private class BinaryDistributionMySqlServerInstance implements MySqlServerInstance {
 
         final Path dataDir;
-        final CountDownLatch running = new CountDownLatch(1); // TODO should be initialized within the monitor instead?
+        final CountDownLatch running = new CountDownLatch(1);
 
-        BinaryDistributionMySqlServerInstance(final MySqlProcess p, Path dataDir, boolean autoShutdown) {
+        BinaryDistributionMySqlServerInstance(final MySqlProcess p, final Path dataDir,
+                boolean autoShutdown) {
+
             this.dataDir = dataDir;
 
             startNamedDaemon("mysqld-monitor-" + dataDir, new Runnable() {
                 @Override public void run() {
                     p.waitForCompletion();
-                    // TODO log it
+                    logger.trace("Instance in " + dataDir + " exited.");
                     running.countDown();
                 }
             });
@@ -177,8 +181,10 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
             if (autoShutdown) {
                 addShutdownHook(new Runnable() {
                     @Override public void run() {
-                        System.out.println("AUTO-SHUTDOWN"); // TODO log it instead?
-                        shutdown();
+                        if (isRunning()) { // TODO if the sockets were unique there would be no need for the monitor-thread & the current impl of isRunning() .. doing the regular ping would be good enough
+                            logger.debug("Automatically shutting down instance in " + dataDir + ".");
+                            shutdown();
+                        }
                     }
                 });
             }
@@ -191,17 +197,17 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         @Override
         public void shutdown() {
-            if (!isRunning()) { // TODO not really bulletproof.. especially if !isRunning()
+            if (!isRunning()) {
                 return;
             }
 
             shutdownInstanceIn(dataDir);
-            try {
-                running.await();    // TODO fixme
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new MySqlProcessException("Interrupted while waiting for shutdown.", e);
-            }
+
+            execute(new Interruptible() {
+                @Override public void run() throws InterruptedException {
+                    running.await();
+                }
+            });
         }
     }
 }

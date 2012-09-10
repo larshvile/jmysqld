@@ -56,18 +56,15 @@ final class MySqlProcess {
 
     /**
      * Waits for the process to complete.
-     *
-     * @throws MySqlProcessException if interrupted while waiting
      */
     MySqlProcess waitForCompletion() {
-        try {
-            p.waitFor();
-            flushLogs();
-            return this;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new MySqlProcessException("Interrupted while waiting for " + p, e);
-        }
+        execute(new Interruptible() {
+            @Override public void run() throws InterruptedException {
+                p.waitFor();
+                flushLogs();
+            }
+        });
+        return this;
     }
 
     /**

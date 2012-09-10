@@ -130,7 +130,7 @@ public class BinaryDistributionMySqlServerTest {
             defaultSpecs().option(SHUTDOWN_EXISTING));
 
         assertTrue(server.isInstanceRunningIn(dataDir));
-        assertFalse(i1.isRunning()); // TODO timing issues??
+        assertFalse(i1.isRunning()); // TODO timing issues?? -- absolutely, could possibly be improved by creating new sockets for each instance / i.e. not in the data-dir
         assertTrue(i2.isRunning());
 
         i2.shutdown();
