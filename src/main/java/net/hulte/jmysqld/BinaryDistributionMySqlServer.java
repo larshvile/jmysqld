@@ -71,7 +71,12 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         logger.debug("Starting MySQL in " + dataDir + ".");
 
         final Path errorLog = dataDir.resolve("error.log");
-        final List<String> args = list("--no-defaults", // TODO or specific file if provided as option??
+        final String defaultsOption = specs.getDefaultsFile() == null
+            ? "--no-defaults"
+            : "--defaults-file=" + specs.getDefaultsFile();
+
+        final List<String> args = list(
+                defaultsOption,
                 "--basedir=" + distPath,
                 "--datadir=" + dataDir,
                 "--socket=" + socket(dataDir),
@@ -80,7 +85,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         if (specs.getPort() != null) {
             args.add("--port=" + specs.getPort());
-        } else { // TODO if (defaultsFile == null)
+        } else if (specs.getDefaultsFile() == null) {
             args.add("--skip-networking");
         }
 

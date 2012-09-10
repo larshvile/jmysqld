@@ -1,5 +1,7 @@
 package net.hulte.jmysqld;
 
+import static java.nio.charset.Charset.defaultCharset;
+import static java.nio.file.Files.newBufferedWriter;
 import static net.hulte.jmysqld.MySql.*;
 import static net.hulte.jmysqld.MySqlServerInstanceSpecs.*;
 import static net.hulte.jmysqld.MySqlServerInstanceSpecs.Option.*;
@@ -147,7 +149,25 @@ public class BinaryDistributionMySqlServerTest {
         i.shutdown();
     }
 
-    // TODO and a version using a settings file
+    @Test
+    public void instance_started_with_defaults_file_can_be_connected_to_with_jdbc() throws Exception {
+        final Path dataDir = preparedDataDir();
+        final Path defaultsFile = dataDir.resolve("settings.cfg");
+
+        try (PrintWriter w = new PrintWriter(newBufferedWriter(defaultsFile, defaultCharset()))) {
+            w.println("[mysqld_safe]");
+            w.println("port=" + mysqlPort());
+        }
+
+        final MySqlServerInstance i = theServer().start(dataDir,
+                defaultSpecs().defaultsFile(defaultsFile));
+
+        final ResultSet res = query("select 'abc'");
+        assertTrue(res.next());
+        assertThat(res.getString(1), equalTo("abc"));
+
+        i.shutdown();
+    }
 
 
     MySqlServerInstanceSpecs defaultSpecs() {
@@ -161,8 +181,8 @@ public class BinaryDistributionMySqlServerTest {
     }
 
     Path dataDir() {
-        return new File("/home/lars/Desktop/mysql-data-test").toPath();
-        // TODO fixo return tmp.getRoot().toPath();
+        // TODO remove return new File("/home/lars/Desktop/mysql-data-test").toPath();
+        return tmp.getRoot().toPath();
     }
 
     static MySqlServer theServer() {
