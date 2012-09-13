@@ -56,8 +56,9 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
     @Override
     public MySqlServerInstance start(Path dataDir, InstanceSpec spec) {
-        // TODO fix this unholy mess...
+        logger.debug("Starting MySQL in " + dataDir + ".");
 
+        // TODO cleanup
         if (isInstanceRunningIn(dataDir)) {
             if (!spec.isSet(SHUTDOWN_EXISTING)) {
                 throw new MySqlProcessException("Another instance is already running in "
@@ -69,14 +70,28 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
             shutdownInstanceIn(dataDir);
         }
 
-        logger.debug("Starting MySQL in " + dataDir + ".");
-
         final Path errorLog = dataDir.resolve("error.log");
-        final String defaultsOption = spec.getDefaultsFile() == null
-            ? "--no-defaults"
-            : "--defaults-file=" + spec.getDefaultsFile();
+        final List<String> args = startArguments(dataDir, errorLog, spec);
+        final ProcessBuilder pb = newProcessBuilder(mysqldSafe(), args);
 
-        final List<String> args = list(
+        pb.directory(distPath.toFile());
+        pb.redirectErrorStream(true);
+
+        final MySqlProcess p = startMySqlProcess(pb)
+            .logStdOut();
+
+        final BinaryDistributionMySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p,
+                dataDir, spec.isSet(AUTO_SHUTDOWN));
+        instance.awaitStartup();
+        return instance;
+    }
+
+    private List<String> startArguments(Path dataDir, Path errorLog, InstanceSpec spec) {
+        final String defaultsOption = spec.getDefaultsFile() == null
+                ? "--no-defaults"
+                : "--defaults-file=" + spec.getDefaultsFile();
+
+        final List<String> result = list(
                 defaultsOption,
                 "--basedir=" + distPath,
                 "--datadir=" + dataDir,
@@ -85,34 +100,12 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
                 "--log-error=" + errorLog);
 
         if (spec.getPort() != null) {
-            args.add("--port=" + spec.getPort());
+            result.add("--port=" + spec.getPort());
         } else if (spec.getDefaultsFile() == null) {
-            args.add("--skip-networking");
+            result.add("--skip-networking");
         }
 
-        final ProcessBuilder pb = newProcessBuilder(mysqldSafe(), args);
-        pb.directory(distPath.toFile());
-        pb.redirectErrorStream(true);
-
-        final MySqlProcess p = startMySqlProcess(pb).logStdOut();
-        final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p, dataDir,
-                spec.isSet(AUTO_SHUTDOWN));
-
-        // TODO eh, let's improve this =)
-        final Path dir = dataDir;
-        execute(new Interruptible() {
-            @Override public void run() throws InterruptedException {
-                while (!isInstanceRunningIn(dir)) {
-                    if (!instance.isRunning()) {
-                        throw new MySqlProcessException("Failed to start instance, see "
-                            + errorLog + " for details.");
-                    }
-                    Thread.sleep(500); // TODO tune me...
-                }
-            }
-        });
-
-        return instance;
+        return result;
     }
 
     @Override
@@ -126,7 +119,6 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
     @Override
     public void shutdownInstanceIn(Path dataDir) {
-        // TODO log it?
         startMySqlProcess(newProcessBuilder(mysqladmin(),
                 "--socket=" + socket(dataDir),
                 "--user=root",
@@ -206,6 +198,20 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
             execute(new Interruptible() {
                 @Override public void run() throws InterruptedException {
                     running.await();
+                }
+            });
+        }
+
+        void awaitStartup() {
+            execute(new Interruptible() {
+                @Override public void run() throws InterruptedException {
+                    while (!isInstanceRunningIn(dataDir)) { // TODO kind of confusing to read this stuf..
+                        if (!isRunning()) {
+                            throw new MySqlProcessException(
+                                "Failed to start instance, see the error-log for details.");
+                        }
+                        Thread.sleep(100);
+                    }
                 }
             });
         }

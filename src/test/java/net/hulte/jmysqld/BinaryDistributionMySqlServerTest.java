@@ -92,7 +92,6 @@ public class BinaryDistributionMySqlServerTest {
 
         thrown.expect(MySqlProcessException.class);
         thrown.expectMessage("Failed to start");
-        thrown.expectMessage("see " + dataDir.resolve("error.log"));
 
         // starting the server with an uninitialized data directory should guarantee failure..
         theServer().start(dataDir, defaultSpec());
