@@ -107,31 +107,10 @@ public class BinaryDistributionMySqlServerTest {
         try {
             server.start(dataDir, defaultSpec());
             fail();
-        } catch (MySqlProcessException e) {
-            assertThat(e.getMessage(), containsString("Another instance is already running"));
-        }
+        } catch (MySqlProcessException e) {}
 
         assertTrue(i1.isRunning());
         i1.shutdown();
-    }
-
-    @Test
-    public void a_running_instance_is_automatically_shut_down_if_specified() {
-        final MySqlServer server = theServer();
-        final Path dataDir = newPreparedDataDir();
-
-        final MySqlServerInstance i1 = server.start(dataDir, defaultSpec());
-
-        assertTrue(i1.isRunning());
-
-        final MySqlServerInstance i2 = server.start(dataDir,
-            defaultSpec().option(SHUTDOWN_EXISTING));
-
-        assertTrue(server.isInstanceRunningIn(dataDir));
-        assertFalse(i1.isRunning()); // TODO timing issues?? -- absolutely, could possibly be improved by creating new sockets for each instance / i.e. not in the data-dir
-        assertTrue(i2.isRunning());
-
-        i2.shutdown();
     }
 
     @Test

@@ -13,12 +13,6 @@ public final class InstanceSpec {
     public enum Option {
 
         /**
-         * Automatically shuts down lingering instances already running in the data directory of a starting
-         * instance. This does not work at all if the previous instance wasn't started from {@code jmysqld}.
-         */
-        SHUTDOWN_EXISTING,
-
-        /**
          * Installs a shutdown-hook used to shut down the instance when the JVM terminates.
          */
         AUTO_SHUTDOWN

@@ -58,18 +58,6 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     public MySqlServerInstance start(Path dataDir, InstanceSpec spec) {
         logger.debug("Starting MySQL in " + dataDir + ".");
 
-        // TODO cleanup
-        if (isInstanceRunningIn(dataDir)) {
-            if (!spec.isSet(SHUTDOWN_EXISTING)) {
-                throw new MySqlProcessException("Another instance is already running in "
-                    + dataDir + ".");
-            }
-
-            logger.debug("Another instance is already running in " + dataDir
-                + ", attempting to shut it down.");
-            shutdownInstanceIn(dataDir);
-        }
-
         final Path errorLog = dataDir.resolve("error.log");
         final List<String> args = startArguments(dataDir, errorLog, spec);
         final ProcessBuilder pb = newProcessBuilder(mysqldSafe(), args);
