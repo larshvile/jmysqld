@@ -1,7 +1,7 @@
 package net.hulte.jmysqld;
 
 import static java.nio.file.Files.exists;
-import static net.hulte.jmysqld.MySqlServerInstanceSpecs.Option.*;
+import static net.hulte.jmysqld.InstanceSpec.Option.*;
 import static net.hulte.jmysqld.MySqlProcess.startMySqlProcess;
 import static net.hulte.jmysqld.Utilities.*;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -55,11 +55,11 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
     }
 
     @Override
-    public MySqlServerInstance start(Path dataDir, MySqlServerInstanceSpecs specs) {
+    public MySqlServerInstance start(Path dataDir, InstanceSpec spec) {
         // TODO fix this unholy mess...
 
         if (isInstanceRunningIn(dataDir)) {
-            if (!specs.isSet(SHUTDOWN_EXISTING)) {
+            if (!spec.isSet(SHUTDOWN_EXISTING)) {
                 throw new MySqlProcessException("Another instance is already running in "
                     + dataDir + ".");
             }
@@ -72,9 +72,9 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         logger.debug("Starting MySQL in " + dataDir + ".");
 
         final Path errorLog = dataDir.resolve("error.log");
-        final String defaultsOption = specs.getDefaultsFile() == null
+        final String defaultsOption = spec.getDefaultsFile() == null
             ? "--no-defaults"
-            : "--defaults-file=" + specs.getDefaultsFile();
+            : "--defaults-file=" + spec.getDefaultsFile();
 
         final List<String> args = list(
                 defaultsOption,
@@ -84,9 +84,9 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
                 "--pid-file=mysql.pid",
                 "--log-error=" + errorLog);
 
-        if (specs.getPort() != null) {
-            args.add("--port=" + specs.getPort());
-        } else if (specs.getDefaultsFile() == null) {
+        if (spec.getPort() != null) {
+            args.add("--port=" + spec.getPort());
+        } else if (spec.getDefaultsFile() == null) {
             args.add("--skip-networking");
         }
 
@@ -96,7 +96,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
 
         final MySqlProcess p = startMySqlProcess(pb).logStdOut();
         final MySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p, dataDir,
-                specs.isSet(AUTO_SHUTDOWN));
+                spec.isSet(AUTO_SHUTDOWN));
 
         // TODO eh, let's improve this =)
         final Path dir = dataDir;

@@ -33,10 +33,10 @@ public interface MySqlServer {
      * method blocks until the server is fully operational.
      *
      * @param dataDir the data directory
-     * @param specs specifications of how to launch the new instance
+     * @param spec specifications of how to launch the new instance
      * @throws MySqlProcessException if unable to start
      */
-    MySqlServerInstance start(Path dataDir, MySqlServerInstanceSpecs specs);
+    MySqlServerInstance start(Path dataDir, InstanceSpec spec);
 
     /**
      * Returns {@code true} if an instance of the MySQL server is running

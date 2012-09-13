@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * Specifications used to start a new instance of the MySQL server.
  */
-public final class MySqlServerInstanceSpecs {
+public final class InstanceSpec {
 
     public enum Option {
 
@@ -29,33 +29,11 @@ public final class MySqlServerInstanceSpecs {
     private Path defaultsFile;
 
 
-    /**
-     * Creates a spec for emulating an embedded database. The instance will automatically be shut down,
-     * attempt to shut down instances already running in the same data directory, and listen for connections
-     * on a provided port.
-     */
-    public static MySqlServerInstanceSpecs newEmbeddedInstanceSpecs(int port) {
-        return newInstanceSpecs(Option.SHUTDOWN_EXISTING, Option.AUTO_SHUTDOWN)
-            .port(port);
-    }
-
-    /**
-     * Creates a new spec with provided options.
-     */
-    public static MySqlServerInstanceSpecs newInstanceSpecs(Option... options) {
-        final MySqlServerInstanceSpecs result = new MySqlServerInstanceSpecs();
-        for (Option o : options) {
-            result.option(o);
-        }
-        return result;
+    public InstanceSpec() {
     }
 
 
-    public MySqlServerInstanceSpecs() {
-    }
-
-
-    MySqlServerInstanceSpecs option(Option o) {
+    InstanceSpec option(Option o) {
         options.add(o);
         return this;
     }
@@ -68,7 +46,7 @@ public final class MySqlServerInstanceSpecs {
      * The port number that the server should use when listening for TCP/IP connections. If neither the port
      * nor a {@code defaultsFile} is provided, the instance will be started with {@code --skip-networking}.
      */
-    MySqlServerInstanceSpecs port(Integer port) {
+    InstanceSpec port(Integer port) {
         this.port = port;
         return this;
     }
@@ -82,7 +60,7 @@ public final class MySqlServerInstanceSpecs {
      * {@code --defaults-file} option. If this file is not specified the server will be started without
      * reading any option files, i.e. {@code --no-defaults}.
      */
-    MySqlServerInstanceSpecs defaultsFile(Path defaultsFile) {
+    InstanceSpec defaultsFile(Path defaultsFile) {
         this.defaultsFile = defaultsFile;
         return this;
     }

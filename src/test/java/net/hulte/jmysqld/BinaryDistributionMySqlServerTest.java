@@ -4,8 +4,7 @@ import static java.nio.charset.Charset.defaultCharset;
 import static java.nio.file.Files.newBufferedWriter;
 import static java.util.UUID.randomUUID;
 import static net.hulte.jmysqld.MySql.*;
-import static net.hulte.jmysqld.MySqlServerInstanceSpecs.*;
-import static net.hulte.jmysqld.MySqlServerInstanceSpecs.Option.*;
+import static net.hulte.jmysqld.InstanceSpec.Option.*;
 import static net.hulte.jmysqld.Utilities.*;
 import static org.junit.Assert.*;
 import static org.junit.rules.ExpectedException.none;
@@ -60,7 +59,7 @@ public class BinaryDistributionMySqlServerTest {
 
         assertFalse(server.isInstanceRunningIn(dataDir));
 
-        server.start(dataDir, defaultSpecs());
+        server.start(dataDir, defaultSpec());
 
         assertTrue(server.isInstanceRunningIn(dataDir));
 
@@ -76,7 +75,7 @@ public class BinaryDistributionMySqlServerTest {
 
         assertFalse(server.isInstanceRunningIn(dataDir));
 
-        final MySqlServerInstance instance = server.start(dataDir, defaultSpecs());
+        final MySqlServerInstance instance = server.start(dataDir, defaultSpec());
 
         assertTrue(instance.isRunning());
         assertTrue(server.isInstanceRunningIn(dataDir));
@@ -96,7 +95,7 @@ public class BinaryDistributionMySqlServerTest {
         thrown.expectMessage("see " + dataDir.resolve("error.log"));
 
         // starting the server with an uninitialized data directory should guarantee failure..
-        theServer().start(dataDir, defaultSpecs());
+        theServer().start(dataDir, defaultSpec());
     }
 
     @Test
@@ -104,10 +103,10 @@ public class BinaryDistributionMySqlServerTest {
         final MySqlServer server = theServer();
         final Path dataDir = newPreparedDataDir();
 
-        final MySqlServerInstance i1 = server.start(dataDir, defaultSpecs());
+        final MySqlServerInstance i1 = server.start(dataDir, defaultSpec());
 
         try {
-            server.start(dataDir, defaultSpecs());
+            server.start(dataDir, defaultSpec());
             fail();
         } catch (MySqlProcessException e) {
             assertThat(e.getMessage(), containsString("Another instance is already running"));
@@ -122,12 +121,12 @@ public class BinaryDistributionMySqlServerTest {
         final MySqlServer server = theServer();
         final Path dataDir = newPreparedDataDir();
 
-        final MySqlServerInstance i1 = server.start(dataDir, defaultSpecs());
+        final MySqlServerInstance i1 = server.start(dataDir, defaultSpec());
 
         assertTrue(i1.isRunning());
 
         final MySqlServerInstance i2 = server.start(dataDir,
-            defaultSpecs().option(SHUTDOWN_EXISTING));
+            defaultSpec().option(SHUTDOWN_EXISTING));
 
         assertTrue(server.isInstanceRunningIn(dataDir));
         assertFalse(i1.isRunning()); // TODO timing issues?? -- absolutely, could possibly be improved by creating new sockets for each instance / i.e. not in the data-dir
@@ -140,7 +139,7 @@ public class BinaryDistributionMySqlServerTest {
     public void instance_started_with_specific_port_can_be_connected_to_with_jdbc() throws Exception {
         final Path dataDir = newPreparedDataDir();
         final MySqlServerInstance i = theServer().start(dataDir,
-                defaultSpecs().port(mysqlPort()));
+                defaultSpec().port(mysqlPort()));
 
         final ResultSet res = query("select 123");
         assertTrue(res.next());
@@ -160,7 +159,7 @@ public class BinaryDistributionMySqlServerTest {
         }
 
         final MySqlServerInstance i = theServer().start(dataDir,
-                defaultSpecs().defaultsFile(defaultsFile));
+                defaultSpec().defaultsFile(defaultsFile));
 
         final ResultSet res = query("select 'abc'");
         assertTrue(res.next());
@@ -170,8 +169,8 @@ public class BinaryDistributionMySqlServerTest {
     }
 
 
-    MySqlServerInstanceSpecs defaultSpecs() {
-        return newInstanceSpecs(AUTO_SHUTDOWN);
+    InstanceSpec defaultSpec() {
+        return new InstanceSpec().option(AUTO_SHUTDOWN);
     }
 
     Path newPreparedDataDir() {
