@@ -62,7 +62,6 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         final Path errorLog = dataDir.resolve("error.log");
         final Path socket = newSocket();
 
-    // TODO extract method?
         final List<String> args = startArguments(dataDir, socket, errorLog, spec);
         final ProcessBuilder pb = newProcessBuilder(mysqldSafe(), args);
 
@@ -72,11 +71,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         final MySqlProcess p = startMySqlProcess(pb)
             .logStdOut();
 
-        final BinaryDistributionMySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p,
-                dataDir, socket, spec.isSet(AUTO_SHUTDOWN));
-    // TODO extract?
-        instance.awaitStartup();
-        return instance;
+        return new BinaryDistributionMySqlServerInstance(p, dataDir, socket, spec.isSet(AUTO_SHUTDOWN));
     }
 
     private List<String> startArguments(Path dataDir, Path socket, Path errorLog, InstanceSpec spec) {
@@ -132,6 +127,8 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
                     }
                 });
             }
+
+            awaitStartup();
         }
 
         @Override
