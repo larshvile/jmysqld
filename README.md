@@ -2,10 +2,23 @@ jmysqld - A java wrapper for the mysqld process
 ===============================================
 
 Allows a Java application to create, start and stop MySQL databases
-on-demand.
+on-demand. Useful in scenarios where a fresh MySQL database is required
+for testing.
 
 This little utility was originally inspired by the late MXJ project,
 http://dev.mysql.com/doc/connector-mxj/en/connector-mxj.html =).
+
+````java
+import net.hulte.jmysqld.*;
+
+Path mysqlBinaries = ...
+Path dataDir = ...
+
+MySqlServer s = MySql.mySqlServerFromBinaryDistribution(mysqlBinaries);
+MySqlServerInstance i = s.start(dataDir, new InstanceSpec().port(3306));
+
+java.sql.DriverManager.getConnection("jdbc:mysql://localhost:3306");
+````
 
 Testing
 -------
