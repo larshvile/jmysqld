@@ -1,6 +1,7 @@
 package net.hulte.jmysqld;
 
 import static java.nio.file.Files.exists;
+import static java.util.UUID.randomUUID;
 import static net.hulte.jmysqld.InstanceSpec.Option.*;
 import static net.hulte.jmysqld.MySqlProcess.startMySqlProcess;
 import static net.hulte.jmysqld.Utilities.*;
@@ -59,7 +60,10 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         logger.debug("Starting MySQL in " + dataDir + ".");
 
         final Path errorLog = dataDir.resolve("error.log");
-        final List<String> args = startArguments(dataDir, errorLog, spec);
+        final Path socket = newSocket();
+
+    // TODO extract method?
+        final List<String> args = startArguments(dataDir, socket, errorLog, spec);
         final ProcessBuilder pb = newProcessBuilder(mysqldSafe(), args);
 
         pb.directory(distPath.toFile());
@@ -69,12 +73,13 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
             .logStdOut();
 
         final BinaryDistributionMySqlServerInstance instance = new BinaryDistributionMySqlServerInstance(p,
-                dataDir, spec.isSet(AUTO_SHUTDOWN));
+                dataDir, socket, spec.isSet(AUTO_SHUTDOWN));
+    // TODO extract?
         instance.awaitStartup();
         return instance;
     }
 
-    private List<String> startArguments(Path dataDir, Path errorLog, InstanceSpec spec) {
+    private List<String> startArguments(Path dataDir, Path socket, Path errorLog, InstanceSpec spec) {
         final String defaultsOption = spec.getDefaultsFile() == null
                 ? "--no-defaults"
                 : "--defaults-file=" + spec.getDefaultsFile();
@@ -83,7 +88,7 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
                 defaultsOption,
                 "--basedir=" + distPath,
                 "--datadir=" + dataDir,
-                "--socket=" + socket(dataDir),
+                "--socket=" + socket,
                 "--pid-file=mysql.pid",
                 "--log-error=" + errorLog);
 
@@ -96,22 +101,72 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         return result;
     }
 
-    @Override
-    public boolean isInstanceRunningIn(Path dataDir) {
-        return startMySqlProcess(newProcessBuilder(mysqladmin(),
-                "--socket=" + socket(dataDir),
-                "ping"))
-            .waitForCompletion()
-            .exitCode() == 0;
-    }
+    private class BinaryDistributionMySqlServerInstance implements MySqlServerInstance {
 
-    @Override
-    public void shutdownInstanceIn(Path dataDir) {
-        startMySqlProcess(newProcessBuilder(mysqladmin(),
-                "--socket=" + socket(dataDir),
-                "--user=root",
-                "shutdown"))
-            .waitForSuccessfulCompletion();
+        final Path socket;
+        final CountDownLatch processExited = new CountDownLatch(1);
+
+        BinaryDistributionMySqlServerInstance(final MySqlProcess p, final Path dataDir, Path socket,
+                boolean autoShutdown) {
+
+            this.socket = socket;
+
+            startNamedDaemon("mysqld-monitor-" + dataDir, new Runnable() {
+                @Override public void run() {
+                    try {
+                        p.waitForCompletion();
+                    } finally {
+                        logger.trace("Instance in " + dataDir + " shut down.");
+                        processExited.countDown();
+                    }
+                }
+            });
+
+            if (autoShutdown) {
+                addShutdownHook(new Runnable() {
+                    @Override public void run() {
+                        if (isRunning()) {
+                            logger.trace("Automatically shutting down instance in " + dataDir + ".");
+                            shutdown();
+                        }
+                    }
+                });
+            }
+        }
+
+        @Override
+        public boolean isRunning() {
+            return startMySqlProcess(newProcessBuilder(mysqladmin(),
+                    "--socket=" + socket,
+                    "ping"))
+                .waitForCompletion()
+                .exitCode() == 0;
+        }
+
+        @Override
+        public void shutdown() {
+            if (!isRunning()) {
+                return;
+            }
+
+            startMySqlProcess(newProcessBuilder(mysqladmin(),
+                    "--socket=" + socket,
+                    "--user=root",
+                    "shutdown"))
+                .waitForSuccessfulCompletion();
+
+            await(processExited);
+        }
+
+        void awaitStartup() {
+            while (!isRunning()) {
+                if (processExited.getCount() == 0) {
+                    throw new MySqlProcessException(
+                        "Failed to start instance, see the error-log for details.");
+                }
+                sleep(100);
+            }
+        }
     }
 
     @Override
@@ -135,74 +190,8 @@ final class BinaryDistributionMySqlServer implements MySqlServer {
         return distPath.resolve("bin").resolve("mysqladmin");
     }
 
-    private static Path socket(Path dataDir) {
-        return dataDir.resolve("mysql.sock");
-    }
-
-
-    private class BinaryDistributionMySqlServerInstance implements MySqlServerInstance {
-
-        final Path dataDir;
-        final CountDownLatch running = new CountDownLatch(1);
-
-        BinaryDistributionMySqlServerInstance(final MySqlProcess p, final Path dataDir,
-                boolean autoShutdown) {
-
-            this.dataDir = dataDir;
-
-            startNamedDaemon("mysqld-monitor-" + dataDir, new Runnable() {
-                @Override public void run() {
-                    p.waitForCompletion();
-                    logger.trace("Instance in " + dataDir + " exited.");
-                    running.countDown();
-                }
-            });
-
-            if (autoShutdown) {
-                addShutdownHook(new Runnable() {
-                    @Override public void run() {
-                        if (isRunning()) { // TODO if the sockets were unique there would be no need for the monitor-thread & the current impl of isRunning() .. doing the regular ping would be good enough
-                            logger.debug("Automatically shutting down instance in " + dataDir + ".");
-                            shutdown();
-                        }
-                    }
-                });
-            }
-        }
-
-        @Override
-        public boolean isRunning() {
-            return running.getCount() == 1;
-        }
-
-        @Override
-        public void shutdown() {
-            if (!isRunning()) {
-                return;
-            }
-
-            shutdownInstanceIn(dataDir);
-
-            execute(new Interruptible() {
-                @Override public void run() throws InterruptedException {
-                    running.await();
-                }
-            });
-        }
-
-        void awaitStartup() {
-            execute(new Interruptible() {
-                @Override public void run() throws InterruptedException {
-                    while (!isInstanceRunningIn(dataDir)) { // TODO kind of confusing to read this stuf..
-                        if (!isRunning()) {
-                            throw new MySqlProcessException(
-                                "Failed to start instance, see the error-log for details.");
-                        }
-                        Thread.sleep(100);
-                    }
-                }
-            });
-        }
+    private static Path newSocket() {
+        return tmpDir().resolve(randomUUID().toString());
     }
 }
 

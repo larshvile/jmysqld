@@ -53,37 +53,15 @@ public class BinaryDistributionMySqlServerTest {
     }
 
     @Test
-    public void server_can_be_started_and_stopped_via_datadir() {
+    public void instace_can_be_started_and_stopped() {
         final MySqlServer server = theServer();
         final Path dataDir = newPreparedDataDir();
-
-        assertFalse(server.isInstanceRunningIn(dataDir));
-
-        server.start(dataDir, defaultSpec());
-
-        assertTrue(server.isInstanceRunningIn(dataDir));
-
-        server.shutdownInstanceIn(dataDir);
-
-        assertFalse(server.isInstanceRunningIn(dataDir));
-    }
-
-    @Test
-    public void server_can_be_started_and_stopped_via_instance() {
-        final MySqlServer server = theServer();
-        final Path dataDir = newPreparedDataDir();
-
-        assertFalse(server.isInstanceRunningIn(dataDir));
 
         final MySqlServerInstance instance = server.start(dataDir, defaultSpec());
 
         assertTrue(instance.isRunning());
-        assertTrue(server.isInstanceRunningIn(dataDir));
-
         instance.shutdown();
-
         assertFalse(instance.isRunning());
-        assertFalse(server.isInstanceRunningIn(dataDir));
     }
 
     @Test

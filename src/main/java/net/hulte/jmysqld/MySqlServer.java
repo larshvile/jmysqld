@@ -38,25 +38,5 @@ public interface MySqlServer {
      */
     MySqlServerInstance start(Path dataDir, InstanceSpec spec);
 
-    /**
-     * Returns {@code true} if an instance of the MySQL server is running
-     * in the provided data directory. This only works reliably if the instance
-     * running in the provided directory was started using {@code jmysqld}.
-     *
-     * @param dataDir the data directory
-     * @throws MySqlProcessException
-     */
-    boolean isInstanceRunningIn(Path dataDir);
-
-    /**
-     * Attempts to shut down an instance of the MySQL server running in the provided
-     * data directory. This only works reliably if the instance running in the provided
-     * directory was started using {@code jmysqld}.
-     *
-     * @param dataDir the data directory
-     * @throws MySqlProcessException
-     */
-    void shutdownInstanceIn(Path dataDir);
-
 }
 

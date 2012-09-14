@@ -5,6 +5,7 @@ import static java.util.Arrays.asList;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.regex.*;
 
 final class Utilities {
@@ -52,6 +53,10 @@ final class Utilities {
         return System.getProperty("user.name");
     }
 
+    static Path tmpDir() {
+        return new File(System.getProperty("java.io.tmpdir")).toPath();
+    }
+
     static ProcessBuilder newProcessBuilder(Path command, String... args) {
         return newProcessBuilder(command, list(args));
     }
@@ -84,6 +89,22 @@ final class Utilities {
 
     static void addShutdownHook(Runnable hook) {
         Runtime.getRuntime().addShutdownHook(new Thread(hook));
+    }
+
+    static void sleep(final long millis) {
+        execute(new Interruptible() {
+            @Override public void run() throws InterruptedException {
+                Thread.sleep(millis);
+            }
+        });
+    }
+
+    static void await(final CountDownLatch latch) {
+        execute(new Interruptible() {
+            @Override public void run() throws InterruptedException {
+                latch.await();
+            }
+        });
     }
 
     static void execute(Interruptible task) {
